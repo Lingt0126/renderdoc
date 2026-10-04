@@ -1013,9 +1013,9 @@ void WrappedID3D12CommandQueue::ExecuteCommandListsInternal(UINT NumCommandLists
       if(!forceMapsListEvent)
         WrappedID3D12Resource::GetMappableIDs(GetResourceManager(), refdIDs, mappableIDs);
 
-      // Some applications keep writing GPU-upload memory after Unmap. Its contents at
+      // Some applications keep writing upload memory after Unmap. Its contents at
       // submission can therefore differ from the Unmap snapshot, even though it is no
-      // longer in GetMaps(). Read back referenced, unmapped GPU-upload buffers as well.
+      // longer in GetMaps(). Read back referenced, unmapped upload buffers as well.
       // Keep each snapshot in the submission stream so replay sees the same CPU writes.
       for(ResourceId id : refdIDs)
       {
@@ -1027,7 +1027,7 @@ void WrappedID3D12CommandQueue::ExecuteCommandListsInternal(UINT NumCommandLists
         ID3D12Resource *resource = (ID3D12Resource *)child;
         D3D12_HEAP_PROPERTIES props = {};
         resource->GetHeapProperties(&props, NULL);
-        if(props.Type != D3D12_HEAP_TYPE_GPU_UPLOAD ||
+        if((props.Type != D3D12_HEAP_TYPE_GPU_UPLOAD && props.Type != D3D12_HEAP_TYPE_UPLOAD) ||
            resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
           continue;
 
@@ -1049,7 +1049,7 @@ void WrappedID3D12CommandQueue::ExecuteCommandListsInternal(UINT NumCommandLists
         m_pDevice->QueueWaitForIdle(readback.unwrappedQueue, Unwrap(readback.fence));
         D3D12_RANGE range = {0, size};
         m_pDevice->MapDataWrite(resource, 0, readback.readbackMapped, range, false);
-        RDCDEBUG("GPU_UPLOAD submit capture %s queue %s bytes=%llu", ToStr(id).c_str(),
+        RDCDEBUG("Upload submit capture %s queue %s bytes=%llu", ToStr(id).c_str(),
                  ToStr(GetResourceID()).c_str(), (uint64_t)size);
       }
 

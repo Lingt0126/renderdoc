@@ -22,8 +22,10 @@
  * THE SOFTWARE.
  ******************************************************************************/
 
+#include <atomic>
 #include <unordered_map>
 #include "common/formatting.h"
+#include "common/threading.h"
 #include "core/core.h"
 #include "core/settings.h"
 #include "driver/d3d11/d3d11_hooks.h"
@@ -182,11 +184,27 @@ private:
   HOOK_NVAPI(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread, 0x43d867c0); \
   HOOK_NVAPI(NvAPI_D3D12_CreateGraphicsPipelineState, 0x2fc28856);         \
   HOOK_NVAPI(NvAPI_D3D12_CreateComputePipelineState, 0x2762deac);          \
+  HOOK_NVAPI(NvAPI_D3D12_LaunchCubinShader, 0x5c52bb86);                  \
   WHITELIST_NVAPI(NvAPI_Unload, 0xd22bdd7e);                               \
   WHITELIST_NVAPI(NvAPI_GetErrorMessage, 0x6c2d048c);                      \
   WHITELIST_NVAPI(NvAPI_GetInterfaceVersionString, 0x01053fa5);
 
   NVAPI_FUNCS();
+
+  static NvAPI_Status __cdecl NvAPI_D3D12_LaunchCubinShader_hook(
+      ID3D12GraphicsCommandList *pCommandList, NVDX_ObjectHandle hShader, NvU32 gridX,
+      NvU32 gridY, NvU32 gridZ, const void *pParams, NvU32 paramSize)
+  {
+    // Preserve the existing passthrough arguments. This is diagnostic only: querying
+    // the entry point does not prove that an application submits Cubin work.
+    NvAPI_Status status = nvhooks.NvAPI_D3D12_LaunchCubinShader()(
+        pCommandList, hShader, gridX, gridY, gridZ, pParams, paramSize);
+    static std::atomic_flag logged = ATOMIC_FLAG_INIT;
+    if(!logged.test_and_set(std::memory_order_relaxed))
+      RDCWARN("NvAPI Cubin launch invoked: commandList=%p shader=%p grid=%ux%ux%u params=%u status=%d; work is not serialised",
+              pCommandList, hShader, gridX, gridY, gridZ, paramSize, int(status));
+    return status;
+  }
 
   static NvAPI_Status __cdecl NvAPI_D3D11_IsNvShaderExtnOpCodeSupported_hook(__in IUnknown *pDev,
                                                                              __in NvU32 opCode,
@@ -628,10 +646,22 @@ private:
       // ndgi::Adapter::Adapter (ndgi-adapter-table-win.cpp:155) when adapter-info NvAPI
       // entry points are missing, leaving the adapter table null and crashing the game.
       // Device-object functions that need unwrapping are still intercepted above.
-      static int count = 0;
-      if(count < 10)
-        RDCWARN("NvAPI passthrough: Returning %p for nvapi_QueryInterface(%s)", real, name.c_str());
-      count++;
+      // Log each passthrough interface once. A global first-ten limit hides graphics
+      // extensions queried after adapter/DRS setup, which can submit uncaptured work.
+      static Threading::CriticalSection logLock;
+      static rdcarray<uint32_t> loggedInterfaces;
+      bool firstQuery = false;
+      {
+        SCOPED_LOCK(logLock);
+        if(!loggedInterfaces.contains(ID))
+        {
+          loggedInterfaces.push_back(ID);
+          firstQuery = true;
+        }
+      }
+      if(firstQuery)
+        RDCWARN("NvAPI passthrough: Returning %p for nvapi_QueryInterface(%s, 0x%08x)", real,
+                name.c_str(), ID);
       return real;
     }
   }

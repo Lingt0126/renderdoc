@@ -3578,10 +3578,151 @@ bool WrappedID3D12GraphicsCommandList::Serialise_Dispatch(SerialiserType &ser, U
   return true;
 }
 
+// Opt-in capture-side reference for investigating replay fidelity. This copy is deliberately
+// not serialised: it observes the application's GPU output without replacing replay data.
+void WrappedID3D12GraphicsCommandList::CaptureDiagnosticUAV(bool beforeDispatch)
+{
+  static const rdcstr shaderFilter = Process::GetEnvVariable("RDOC_CAPTURE_UAV_SHADER");
+  static const rdcstr outputPrefix = Process::GetEnvVariable("RDOC_CAPTURE_UAV_OUTPUT");
+  if(shaderFilter.empty() || outputPrefix.empty() || !IsActiveCapturing(m_State) ||
+     !m_CurCompRootSig || m_CaptureComputeState.pipe == ResourceId())
+    return;
+
+  WrappedID3D12PipelineState *pso =
+      GetResourceManager()->GetResAs<WrappedID3D12PipelineState>(m_CaptureComputeState.pipe);
+  if(!pso)
+    return;
+  const rdcfixedarray<uint32_t, 4> &hash = pso->captureComputeHash;
+  rdcstr hashString;
+  const byte *hashBytes = (const byte *)hash.data();
+  for(size_t i = 0; i < 16; i++)
+    hashString += StringFormat::Fmt("%02x", hashBytes[i]);
+  if(hashString != shaderFilter)
+    return;
+  RDCLOG("Capture UAV diagnostic matched compute shader %s (%s dispatch)", hashString.c_str(),
+         beforeDispatch ? "before" : "after");
+
+  const auto &params = GetWrapped(m_CurCompRootSig)->sig.Parameters;
+  const auto &elements = m_CaptureComputeState.compute.sigelems;
+  for(size_t slot = 0; slot < params.size() && slot < elements.size(); slot++)
+  {
+    if(elements[slot].type != eRootTable)
+      continue;
+    WrappedID3D12DescriptorHeap *heap =
+        GetResourceManager()->GetResAs<WrappedID3D12DescriptorHeap>(elements[slot].id);
+    if(!heap)
+      continue;
+    uint64_t nextOffset = 0;
+    for(const D3D12_DESCRIPTOR_RANGE1 &range : params[slot].ranges)
+    {
+      uint64_t offset = range.OffsetInDescriptorsFromTableStart;
+      if(offset == D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+        offset = nextOffset;
+      nextOffset = offset + range.NumDescriptors;
+      if(range.RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_UAV || range.RegisterSpace != 0 ||
+         range.BaseShaderRegister != 0 || range.NumDescriptors == 0)
+        continue;
+      uint64_t index = elements[slot].offset + offset;
+      if(index >= heap->GetNumDescriptors())
+        return;
+      const D3D12Descriptor &descriptor = heap->GetDescriptors()[index];
+      if(descriptor.GetType() != D3D12DescriptorType::UAV)
+        return;
+      D3D12_UNORDERED_ACCESS_VIEW_DESC view = descriptor.GetUAV();
+      if(view.ViewDimension != D3D12_UAV_DIMENSION_TEXTURE2D || view.Texture2D.MipSlice != 0 ||
+         view.Texture2D.PlaneSlice != 0)
+        return;
+      ResourceId resourceId = descriptor.GetResResourceId();
+      ID3D12Resource *source = GetResourceManager()->GetResAs<ID3D12Resource>(resourceId);
+      if(!source)
+        return;
+      D3D12_RESOURCE_DESC desc = source->GetDesc();
+      if(desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || desc.DepthOrArraySize != 1 ||
+         desc.SampleDesc.Count != 1)
+        return;
+      D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint = {};
+      UINT64 size = 0;
+      m_pDevice->GetReal()->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, NULL, NULL, &size);
+      if(size == 0 || size > 128ULL * 1024 * 1024)
+        return;
+      D3D12GpuBuffer *readback = NULL;
+      if(!GetResourceManager()->GetGPUBufferAllocator().Alloc(
+             D3D12GpuBufferHeapType::ReadBackHeap, D3D12GpuBufferHeapMemoryFlag::Default,
+             size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, &readback))
+      {
+        RDCWARN("Capture UAV diagnostic allocation failed");
+        return;
+      }
+      // Reuse the list/queue fence retention mechanism, including repeated submissions.
+      PatchedRayDispatch::Resources retained = {};
+      // The queue uses lookupBuffer being non-null as its pending-allocation sentinel.
+      retained.lookupBuffer = readback;
+      retained.query = ~0U;
+      m_RayDispatches.push_back(retained);
+      D3D12_RESOURCE_BARRIER barrier = {};
+      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Transition.pResource = Unwrap(source);
+      barrier.Transition.Subresource = 0;
+      barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+      m_pList->ResourceBarrier(1, &barrier);
+      D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
+      src.pResource = Unwrap(source);
+      src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+      dst.pResource = readback->Resource();
+      dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+      dst.PlacedFootprint = footprint;
+      dst.PlacedFootprint.Offset += readback->Offset();
+      m_pList->CopyTextureRegion(&dst, 0, 0, 0, &src, NULL);
+      std::swap(barrier.Transition.StateBefore, barrier.Transition.StateAfter);
+      m_pList->ResourceBarrier(1, &barrier);
+
+      static int64_t sequence = 0;
+      rdcstr filename = StringFormat::Fmt("%s_%s_%llu.bin", outputPrefix.c_str(),
+                                         beforeDispatch ? "before" : "after",
+                                         (unsigned long long)Atomic::Inc64(&sequence));
+      readback->AddRef();
+      AddSubmissionASBuildCallback(true, [readback, size, filename, resourceId, footprint]() {
+        D3D12_RANGE range = {(SIZE_T)readback->Offset(), (SIZE_T)(readback->Offset() + size)};
+        void *mapped = readback->Map(&range);
+        if(mapped)
+        {
+          FILE *file = FileIO::fopen(filename.c_str(), FileIO::WriteBinary);
+          if(file)
+          {
+            size_t written = FileIO::fwrite(mapped, 1, (size_t)size, file);
+            FileIO::fclose(file);
+            RDCLOG("Capture UAV reference %s resource %s %ux%u format %u pitch %u bytes %llu/%llu",
+                   filename.c_str(), ToStr(resourceId).c_str(), footprint.Footprint.Width,
+                   footprint.Footprint.Height, (UINT)footprint.Footprint.Format,
+                   footprint.Footprint.RowPitch, (unsigned long long)written,
+                   (unsigned long long)size);
+          }
+          else
+            RDCWARN("Could not open capture UAV reference %s", filename.c_str());
+          D3D12_RANGE noWrite = {0, 0};
+          readback->Unmap(&noWrite);
+        }
+        else
+          RDCWARN("Capture UAV reference map failed");
+        readback->Release();
+        return true;
+      }, [readback]() { readback->Release(); });
+      return;
+    }
+  }
+}
+
 void WrappedID3D12GraphicsCommandList::Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY,
                                                 UINT ThreadGroupCountZ)
 {
+  if(IsActiveCapturing(m_State))
+    CaptureDiagnosticUAV(true);
+
   SERIALISE_TIME_CALL(m_pList->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ));
+
+  if(IsActiveCapturing(m_State))
+    CaptureDiagnosticUAV(false);
 
   if(IsCaptureMode(m_State))
   {

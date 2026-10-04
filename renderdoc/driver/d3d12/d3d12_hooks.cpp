@@ -34,6 +34,18 @@
 #include "driver/dx/official/D3D11On12On7.h"
 #include "os/win32/export_patch.h"
 
+static uint64_t NativeFactoryCreationSlot()
+{
+  static const uint64_t slot = Threading::AllocateTLSSlot();
+  return slot;
+}
+
+struct ScopedNativeFactoryCreation
+{
+  ScopedNativeFactoryCreation() { Threading::SetTLSValue(NativeFactoryCreationSlot(), this); }
+  ~ScopedNativeFactoryCreation() { Threading::SetTLSValue(NativeFactoryCreationSlot(), NULL); }
+};
+
 // prologue signatures verified on:
 //   win11 system d3d12.dll (10.0.26100): 48 89 5C 24 08 ... (5-byte mov, then further
 //   reg saves - we only require the first instruction and relocate 2x5-byte movs)
@@ -450,6 +462,20 @@ public:
                                                  D3D_FEATURE_LEVEL FeatureLevel, REFIID riid,
                                                  _COM_Outptr_opt_ void **ppvDevice)
   {
+    if(Process::GetEnvVariable("RDOC_CAPTURE_DRED") == "1")
+    {
+      // Agility factories have their own configuration; use the real factory before creating
+      // its device, rather than the wrapped application-facing diagnostic interface.
+      D3D12DevConfiguration tmpConfig = {};
+      HRESULT hr = m_pReal->GetConfigurationInterface(
+          CLSID_D3D12DeviceRemovedExtendedData,
+          __uuidof(ID3D12DeviceRemovedExtendedDataSettings), (void **)&tmpConfig.dred);
+      bool enabled = SUCCEEDED(hr) && EnableDRED(&tmpConfig, NULL);
+      RDCLOG("Capture diagnostic: factory DRED enabled=%u, interface=%s", enabled ? 1U : 0U,
+             ToStr(hr).c_str());
+      SAFE_RELEASE(tmpConfig.dred);
+    }
+
     if(RenderDoc::Inst().GetCaptureOptions().apiValidation)
     {
       D3D12DevConfiguration tmpConfig = {};
@@ -541,7 +567,16 @@ public:
     }
 
     ID3D12DeviceFactory *realFactory = NULL;
-    HRESULT hr = m_pReal1->CreateDeviceFactory(SDKVersion, SDKPath, riid, (void **)&realFactory);
+    // Export and IAT hooks can nest SDK configuration wrappers. Only the outer call wraps the
+    // result; the runtime's own factory lookup must keep its native interface during construction.
+    if(Threading::GetTLSValue(NativeFactoryCreationSlot()))
+      return m_pReal1->CreateDeviceFactory(SDKVersion, SDKPath, riid, ppvFactory);
+
+    HRESULT hr;
+    {
+      ScopedNativeFactoryCreation nativeCreation;
+      hr = m_pReal1->CreateDeviceFactory(SDKVersion, SDKPath, riid, (void **)&realFactory);
+    }
     if(SUCCEEDED(hr))
     {
       RDCASSERT(realFactory);
@@ -597,7 +632,26 @@ public:
 
   static HRESULT GetWrappedInterface(IUnknown *realUnk, REFIID riid, void **ppvInterface)
   {
-    if(riid == __uuidof(ID3D12Debug))
+    if(realUnk &&
+       (riid == __uuidof(ID3D12DeviceRemovedExtendedDataSettings) ||
+        riid == __uuidof(ID3D12DeviceRemovedExtendedDataSettings1) ||
+        riid == __uuidof(ID3D12DeviceRemovedExtendedDataSettings2)))
+    {
+      // These configure diagnostics before device creation and contain no device/resource
+      // entry points. The Agility loader needs the real settings interface, including when
+      // D3D12GetDebugInterface internally calls the intercepted D3D12Core export.
+      realUnk->AddRef();
+      *ppvInterface = realUnk;
+      return S_OK;
+    }
+    else if(riid == __uuidof(ID3D12DeviceFactory) && realUnk)
+    {
+      realUnk->AddRef();
+      *ppvInterface = (ID3D12DeviceFactory *)(
+          new WrappedID3D12DeviceFactory((ID3D12DeviceFactory *)realUnk));
+      return S_OK;
+    }
+    else if(riid == __uuidof(ID3D12Debug))
     {
       *ppvInterface = (ID3D12Debug *)(new WrappedID3D12Debug());
       return S_OK;
@@ -761,6 +815,13 @@ private:
 
     if(RenderDoc::Inst().GetCaptureOptions().apiValidation)
       EnableDebugLayer = EnableD3D12DebugLayer(NULL, GetDebugInterface());
+
+    if(Process::GetEnvVariable("RDOC_CAPTURE_DRED") == "1" &&
+       (!devConfig || !devConfig->devfactory))
+    {
+      bool enabled = EnableDRED(devConfig, GetDebugInterface());
+      RDCLOG("Capture diagnostic: DRED enabled=%u", enabled ? 1U : 0U);
+    }
 
     RDCDEBUG("Calling real createdevice...");
 
@@ -1032,9 +1093,24 @@ private:
         0xdfafdd2c, 0x355f, 0x4cb3, {0xa8, 0xb2, 0xea, 0x7f, 0x92, 0x60, 0x14, 0x8b}};
 
     IUnknown *realUnk = NULL;
-    HRESULT real_call = real(rclsid, riid, (void **)&realUnk);
+    HRESULT real_call;
+    if(riid == __uuidof(ID3D12DeviceFactory) &&
+       !Threading::GetTLSValue(NativeFactoryCreationSlot()))
+    {
+      // The original export may itself be intercepted. Let nested calls return the native
+      // factory so an application-facing lookup receives exactly one wrapper.
+      ScopedNativeFactoryCreation nativeLookup;
+      real_call = real(rclsid, riid, (void **)&realUnk);
+    }
+    else
+    {
+      real_call = real(rclsid, riid, (void **)&realUnk);
+    }
 
-    if(SUCCEEDED(real_call) && realUnk && riid == IID_ID3D12CoreModule)
+    const bool nativeFactoryLookup = riid == __uuidof(ID3D12DeviceFactory) &&
+                                     Threading::GetTLSValue(NativeFactoryCreationSlot());
+    if(SUCCEEDED(real_call) && realUnk &&
+       (riid == IID_ID3D12CoreModule || nativeFactoryLookup))
     {
       *ppvDebug = realUnk;
       return real_call;

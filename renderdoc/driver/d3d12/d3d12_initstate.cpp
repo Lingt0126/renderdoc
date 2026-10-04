@@ -85,6 +85,26 @@ bool D3D12ResourceManager::Prepare_InitialState(ID3D12DeviceChild *res)
   ResourceId id = GetResID(res);
   D3D12ResourceType type = IdentifyTypeByPtr(res);
 
+  static const bool diagnoseInitialCopies =
+      Process::GetEnvVariable("RDOC_CAPTURE_INIT_BATCH_FLUSH") == "1";
+  if(diagnoseInitialCopies)
+  {
+    RDCLOG("Initial-copy diagnostic: preparing %s type=%u", ToStr(id).c_str(), (uint32_t)type);
+    if(type == Resource_Resource)
+    {
+      ID3D12Resource *real = ((WrappedID3D12Resource *)res)->GetReal();
+      const D3D12_RESOURCE_DESC desc = real->GetDesc();
+      D3D12_HEAP_PROPERTIES props = {};
+      real->GetHeapProperties(&props, NULL);
+      RDCLOG("Initial-copy diagnostic: %s heap=%u dimension=%u size=%llu x %u x %u "
+             "mips=%u format=%u flags=0x%x samples=%u",
+             ToStr(id).c_str(), (uint32_t)props.Type, (uint32_t)desc.Dimension,
+             (unsigned long long)desc.Width, desc.Height, (uint32_t)desc.DepthOrArraySize,
+             (uint32_t)desc.MipLevels, (uint32_t)desc.Format, (uint32_t)desc.Flags,
+             desc.SampleDesc.Count);
+    }
+  }
+
   if(type == Resource_DescriptorHeap)
   {
     WrappedID3D12DescriptorHeap *heap = (WrappedID3D12DescriptorHeap *)res;
@@ -278,6 +298,9 @@ bool D3D12ResourceManager::Prepare_InitialState(ID3D12DeviceChild *res)
 
       ID3D12GraphicsCommandList *list = Unwrap(m_Device->GetInitialStateList());
 
+      if(diagnoseInitialCopies)
+        D3D12MarkerRegion::Set(list, "RenderDoc initial buffer copy " + ToStr(id));
+
       // transition to copy source
       if(needsTransition)
         list->ResourceBarrier(1, &barrier);
@@ -366,6 +389,9 @@ bool D3D12ResourceManager::Prepare_InitialState(ID3D12DeviceChild *res)
 
       ID3D12GraphicsCommandListX *list = m_Device->GetInitialStateList();
 
+      if(diagnoseInitialCopies)
+        D3D12MarkerRegion::Set(Unwrap(list), "RenderDoc initial texture copy " + ToStr(id));
+
       BarrierSet barriers;
 
       barriers.Configure(wrappedResource, m_Device->GetSubresourceStates(GetResID(wrappedResource)),
@@ -385,6 +411,9 @@ bool D3D12ResourceManager::Prepare_InitialState(ID3D12DeviceChild *res)
 
         // open the initial state list again for the remainder of the work
         list = m_Device->GetInitialStateList();
+
+        if(diagnoseInitialCopies)
+          D3D12MarkerRegion::Set(Unwrap(list), "RenderDoc initial MSAA copy " + ToStr(id));
 
         D3D12_RESOURCE_BARRIER b = {};
         b.Transition.pResource = arrayTexture;

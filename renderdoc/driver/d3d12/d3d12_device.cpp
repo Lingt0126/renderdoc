@@ -59,6 +59,225 @@ WRAPPED_POOL_INST(WrappedID3D12Device);
 Threading::CriticalSection WrappedID3D12Device::m_DeviceWrappersLock;
 std::map<ID3D12Device *, WrappedID3D12Device *> WrappedID3D12Device::m_DeviceWrappers;
 
+// Replay serialises execution across queues, so a wait on a signal submitted later by
+// another queue must be represented by the order of the capture's queue operations.
+// CPU writes must retain their original chronology: moving an earlier upload with its
+// deferred submit can overwrite data initialised by the producer in the meantime.
+static bool OrderCaptureQueueChunks(const rdcarray<Chunk *> &chunks, uint64_t version,
+                                   rdcarray<Chunk *> &ordered)
+{
+  struct QueueNode
+  {
+    size_t chunkIndex = 0;
+    D3D12Chunk type = D3D12Chunk::Max;
+    ResourceId queue, fence;
+    uint64_t value = 0;
+    int previous = -1, producer = -1;
+    bool seen = false, emitted = false;
+  };
+
+  rdcarray<QueueNode> nodes;
+  std::map<ResourceId, int> previous;
+  std::map<size_t, int> nodeAtChunk;
+  for(size_t i = 0; i < chunks.size(); i++)
+  {
+    D3D12Chunk type = chunks[i]->GetChunkType<D3D12Chunk>();
+    switch(type)
+    {
+      case D3D12Chunk::Queue_ExecuteCommandLists:
+      case D3D12Chunk::Queue_Signal:
+      case D3D12Chunk::Queue_Wait:
+      case D3D12Chunk::Queue_UpdateTileMappings:
+      case D3D12Chunk::Queue_CopyTileMappings:
+      case D3D12Chunk::Queue_BeginEvent:
+      case D3D12Chunk::Queue_SetMarker:
+      case D3D12Chunk::Queue_EndEvent: break;
+      default: continue;
+    }
+
+    QueueNode node;
+    node.chunkIndex = i;
+    node.type = type;
+    ReadSerialiser reader(new StreamReader(chunks[i]->GetData(), chunks[i]->GetSize()),
+                          Ownership::Stream);
+    reader.SetVersion(version);
+    if(reader.ReadChunk<D3D12Chunk>() != type)
+      return false;
+    // Interface pointers are serialised as ResourceIds. No live-object lookup is needed.
+    reader.Serialise("pQueue"_lit, node.queue);
+    if(type == D3D12Chunk::Queue_Wait || type == D3D12Chunk::Queue_Signal)
+    {
+      reader.Serialise("pFence"_lit, node.fence);
+      reader.Serialise("Value"_lit, node.value);
+    }
+    reader.EndChunk();
+    if(reader.IsErrored() || node.queue == ResourceId())
+      return false;
+    auto prev = previous.find(node.queue);
+    if(prev != previous.end())
+      node.previous = prev->second;
+    previous[node.queue] = int(nodes.size());
+    nodeAtChunk[i] = int(nodes.size());
+    nodes.push_back(node);
+  }
+
+  size_t forwardWaits = 0;
+  for(size_t i = 0; i < nodes.size(); i++)
+  {
+    if(nodes[i].type != D3D12Chunk::Queue_Wait || nodes[i].fence == ResourceId())
+      continue;
+    // Match the exact signal rather than an arbitrary higher future value: waits for
+    // an already-completed previous-frame value must not acquire a new dependency.
+    for(size_t j = 0; j < nodes.size(); j++)
+    {
+      if(nodes[j].type == D3D12Chunk::Queue_Signal && nodes[j].fence == nodes[i].fence &&
+         nodes[j].value == nodes[i].value)
+      {
+        nodes[i].producer = int(j);
+        if(j > i)
+          forwardWaits++;
+        break;
+      }
+    }
+  }
+  if(forwardWaits == 0)
+  {
+    ordered = chunks;
+    return true;
+  }
+
+  ordered.clear();
+  ordered.reserve(chunks.size());
+  size_t emitted = 0;
+  for(size_t i = 0; i < chunks.size(); i++)
+  {
+    auto it = nodeAtChunk.find(i);
+    if(it == nodeAtChunk.end())
+    {
+      ordered.push_back(chunks[i]);
+      continue;
+    }
+    nodes[it->second].seen = true;
+    bool progress;
+    do
+    {
+      progress = false;
+      for(QueueNode &node : nodes)
+      {
+        if(node.seen && !node.emitted &&
+           (node.previous < 0 || nodes[node.previous].emitted) &&
+           (node.producer < 0 || nodes[node.producer].emitted))
+        {
+          ordered.push_back(chunks[node.chunkIndex]);
+          node.emitted = true;
+          emitted++;
+          progress = true;
+          // Reconsider the earliest deferred operation immediately after each signal.
+          break;
+        }
+      }
+    } while(progress);
+  }
+  if(emitted != nodes.size() || ordered.size() != chunks.size())
+  {
+    ordered.clear();
+    RDCWARN("Capture queue dependencies could not be ordered; retaining original chunk order");
+    return false;
+  }
+  RDCLOG("Ordered capture queue operations for %zu forward fence waits; CPU writes unchanged",
+         forwardWaits);
+  return true;
+}
+
+#if ENABLED(ENABLE_UNIT_TESTS)
+#include "catch/catch.hpp"
+
+TEST_CASE("D3D12 capture queue ordering", "[d3d12][capture]")
+{
+  const uint64_t version = D3D12InitParams::CurrentVersion;
+  ResourceId queueA = ResourceIDGen::GetNewUniqueID();
+  ResourceId queueB = ResourceIDGen::GetNewUniqueID();
+  ResourceId fenceA = ResourceIDGen::GetNewUniqueID();
+  ResourceId fenceB = ResourceIDGen::GetNewUniqueID();
+  rdcarray<Chunk *> chunks, ordered;
+  auto add = [&](D3D12Chunk type, ResourceId queue, ResourceId fence, uint64_t value) {
+    WriteSerialiser ser(new StreamWriter(StreamWriter::DefaultScratchSize), Ownership::Stream);
+    ser.SetVersion(version);
+    SCOPED_SERIALISE_CHUNK(type);
+    ser.Serialise("pQueue"_lit, queue);
+    if(type == D3D12Chunk::Queue_Wait || type == D3D12Chunk::Queue_Signal)
+    {
+      ser.Serialise("pFence"_lit, fence);
+      ser.Serialise("Value"_lit, value);
+    }
+    chunks.push_back(scope.Get());
+  };
+
+  SECTION("Forward dependency preserves CPU writes and queue order")
+  {
+    add(D3D12Chunk::Resource_WriteToSubresource, ResourceId(), ResourceId(), 0);
+    add(D3D12Chunk::Queue_Wait, queueA, fenceB, 7);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueA, ResourceId(), 0);
+    add(D3D12Chunk::Resource_WriteToSubresource, ResourceId(), ResourceId(), 0);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueB, ResourceId(), 0);
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 7);
+    add(D3D12Chunk::Resource_WriteToSubresource, ResourceId(), ResourceId(), 0);
+    add(D3D12Chunk::Queue_SetMarker, queueA, ResourceId(), 0);
+    REQUIRE(OrderCaptureQueueChunks(chunks, version, ordered));
+    rdcarray<Chunk *> expected = {chunks[0], chunks[3], chunks[4], chunks[5],
+                                 chunks[1], chunks[2], chunks[6], chunks[7]};
+    CHECK(ordered == expected);
+  }
+  SECTION("A higher future signal does not replace a previous-frame dependency")
+  {
+    add(D3D12Chunk::Queue_Wait, queueA, fenceB, 5);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueA, ResourceId(), 0);
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 6);
+    REQUIRE(OrderCaptureQueueChunks(chunks, version, ordered));
+    CHECK(ordered == chunks);
+  }
+  SECTION("Chained dependencies retain queue markers, tile operations and CPU writes")
+  {
+    ResourceId queueC = ResourceIDGen::GetNewUniqueID();
+    ResourceId fenceC = ResourceIDGen::GetNewUniqueID();
+    add(D3D12Chunk::Queue_Wait, queueA, fenceB, 7);
+    add(D3D12Chunk::Queue_BeginEvent, queueA, ResourceId(), 0);
+    add(D3D12Chunk::Queue_Wait, queueB, fenceC, 9);
+    add(D3D12Chunk::Queue_UpdateTileMappings, queueB, ResourceId(), 0);
+    add(D3D12Chunk::Resource_WriteToSubresource, ResourceId(), ResourceId(), 0);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueC, ResourceId(), 0);
+    add(D3D12Chunk::Queue_Signal, queueC, fenceC, 9);
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 7);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueA, ResourceId(), 0);
+    REQUIRE(OrderCaptureQueueChunks(chunks, version, ordered));
+    rdcarray<Chunk *> expected = {chunks[4], chunks[5], chunks[6], chunks[2], chunks[3],
+                                 chunks[7], chunks[0], chunks[1], chunks[8]};
+    CHECK(ordered == expected);
+  }
+  SECTION("A completed in-frame signal does not delay a wait until a repeated signal")
+  {
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 7);
+    add(D3D12Chunk::Queue_Wait, queueA, fenceB, 7);
+    add(D3D12Chunk::Queue_ExecuteCommandLists, queueA, ResourceId(), 0);
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 7);
+    REQUIRE(OrderCaptureQueueChunks(chunks, version, ordered));
+    CHECK(ordered == chunks);
+  }
+  SECTION("Cyclic dependencies reject reordering without losing chunks")
+  {
+    add(D3D12Chunk::Queue_Wait, queueA, fenceB, 1);
+    add(D3D12Chunk::Queue_Wait, queueB, fenceA, 1);
+    add(D3D12Chunk::Queue_Signal, queueA, fenceA, 1);
+    add(D3D12Chunk::Queue_Signal, queueB, fenceB, 1);
+    CHECK_FALSE(OrderCaptureQueueChunks(chunks, version, ordered));
+    CHECK(ordered.empty());
+    CHECK(chunks.size() == 4);
+  }
+  for(Chunk *chunk : chunks)
+    chunk->Delete();
+}
+#endif
+
 void WrappedID3D12Device::RemoveQueue(WrappedID3D12CommandQueue *queue)
 {
   m_Queues.removeOne(queue);
@@ -2951,6 +3170,14 @@ void WrappedID3D12Device::StartFrameCapture(DeviceOwnedWindow devWnd)
 
     GetResourceManager()->PrepareInitialContents();
 
+    const bool diagnoseInitialCopies =
+        Process::GetEnvVariable("RDOC_CAPTURE_INIT_BATCH_FLUSH") == "1";
+    if(diagnoseInitialCopies)
+      RDCLOG("Initial-copy diagnostic: final batch recording requests=%u pending lists=%u "
+             "fatal=%u",
+             (uint32_t)initStateCurBatch, (uint32_t)m_InternalCmds.pendingcmds.size(),
+             HasFatalError() ? 1U : 0U);
+
     if(initStateCurList)
     {
       // close the final list
@@ -2961,7 +3188,13 @@ void WrappedID3D12Device::StartFrameCapture(DeviceOwnedWindow devWnd)
     initStateCurList = NULL;
 
     ExecuteLists(NULL, true);
+    if(diagnoseInitialCopies)
+      RDCLOG("Initial-copy diagnostic: final batch submitted lists=%u fatal=%u",
+             (uint32_t)m_InternalCmds.submittedcmds.size(), HasFatalError() ? 1U : 0U);
     FlushLists();
+    if(diagnoseInitialCopies)
+      RDCLOG("Initial-copy diagnostic: final batch wait finished, fatal=%u",
+             HasFatalError() ? 1U : 0U);
 
     RDCDEBUG("Attempting capture");
     m_FrameCaptureRecord->DeleteChunks();
@@ -3329,11 +3562,24 @@ bool WrappedID3D12Device::EndFrameCapture(DeviceOwnedWindow devWnd)
     float num = float(recordlist.size());
     float idx = 0.0f;
 
+    rdcarray<Chunk *> captureChunks;
     for(auto it = recordlist.begin(); it != recordlist.end(); ++it)
+      captureChunks.push_back(it->second);
+
+    // Keep cross-queue producers before their dependent submissions during serial replay.
+    // An explicit opt-out is retained for capture diagnostics and regression comparisons.
+    if(Process::GetEnvVariable("RDOC_CAPTURE_ORDER_QUEUES") != "0")
+    {
+      rdcarray<Chunk *> ordered;
+      if(OrderCaptureQueueChunks(captureChunks, GetCaptureVersion(), ordered))
+        captureChunks.swap(ordered);
+    }
+
+    for(Chunk *chunk : captureChunks)
     {
       RenderDoc::Inst().SetProgress(CaptureProgress::SerialiseFrameContents, idx / num);
       idx += 1.0f;
-      it->second->Write(ser);
+      chunk->Write(ser);
     }
 
     RDCDEBUG("Done");
@@ -3749,6 +3995,9 @@ void WrappedID3D12Device::ReleaseResource(ID3D12DeviceChild *res)
   {
     SCOPED_LOCK(m_ResourceStatesLock);
     m_ResourceStates.erase(id);
+    // Bindless capture references cover live resources. Retaining released IDs makes subsequent
+    // captures revisit every historical allocation and rebuild their write-time entries.
+    m_BindlessFrameRefs.erase(id);
   }
 
   {
@@ -5058,6 +5307,23 @@ ID3D12GraphicsCommandListX *WrappedID3D12Device::GetInitialStateList()
   if(initStateCurBatch >= initialStateMaxBatch)
   {
     CloseInitialStateList();
+
+    // Bound capture initial-copy submissions as well as command-list recording. Submitting
+    // all closed lists together can put thousands of copies in one GPU workload and cause
+    // device removal. Waiting here also permits safe allocator/list reuse between batches.
+    // Replay keeps its existing scheduling; an explicit opt-out supports diagnostics.
+    if(IsBackgroundCapturing(m_State) &&
+       Process::GetEnvVariable("RDOC_CAPTURE_INIT_BATCH_FLUSH") != "0")
+    {
+      const bool diagnose = Process::GetEnvVariable("RDOC_CAPTURE_INIT_BATCH_FLUSH") == "1";
+      if(diagnose)
+        RDCLOG("Initial-copy diagnostic: submitting batch of %u lists",
+               (uint32_t)m_InternalCmds.pendingcmds.size());
+      ExecuteLists(NULL, true);
+      FlushLists(true);
+      if(diagnose)
+        RDCLOG("Initial-copy diagnostic: batch finished, fatal=%u", HasFatalError() ? 1U : 0U);
+    }
   }
 
   if(initStateCurList == NULL)
@@ -5152,6 +5418,11 @@ void WrappedID3D12Device::FlushLists(bool forceSync)
   if(!m_InternalCmds.submittedcmds.empty() || forceSync)
   {
     QueueWaitForIdle(m_Queue, m_WFIFence);
+
+    // Device removal during the wait does not establish completion. Keep submitted lists
+    // out of the reusable pool and do not reset their allocator after a failed flush.
+    if(HasFatalError())
+      return;
 
     if(!m_InternalCmds.submittedcmds.empty())
       m_InternalCmds.freecmds.append(m_InternalCmds.submittedcmds);

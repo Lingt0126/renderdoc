@@ -1039,6 +1039,8 @@ public:
   ShaderEntry *AS() { return graphics ? (ShaderEntry *)graphics->AS.pShaderBytecode : NULL; }
   ShaderEntry *MS() { return graphics ? (ShaderEntry *)graphics->MS.pShaderBytecode : NULL; }
   ShaderEntry *CS() { return compute ? (ShaderEntry *)compute->CS.pShaderBytecode : NULL; }
+  // Capture does not retain ShaderEntry objects. Keep the compute identity for diagnostics.
+  rdcfixedarray<uint32_t, 4> captureComputeHash = {};
   WrappedID3D12PipelineState(ResourceId id, ID3D12PipelineState *real, WrappedID3D12Device *device)
       : WrappedDeviceChild12(id, real, device)
   {

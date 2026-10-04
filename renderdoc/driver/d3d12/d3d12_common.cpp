@@ -62,7 +62,7 @@ D3D12MarkerRegion::~D3D12MarkerRegion()
 UINT MakeMarkerText(bool begin, const rdcstr &marker, bytebuf &storage)
 {
   // DRED needs encoded PIX markers, blerch
-  if(D3D12_Debug_EnableDRED())
+  if(D3D12_Debug_EnableDRED() || Process::GetEnvVariable("RDOC_CAPTURE_DRED") == "1")
   {
     uint64_t header[3] = {
         begin ? (2ULL << 10) : (8ULL << 10),    // begin or set event
@@ -414,7 +414,8 @@ bool EnableDRED(D3D12DevConfiguration *devConfig, PFN_D3D12_GET_DEBUG_INTERFACE 
       SAFE_RELEASE(dred);
   }
 
-  if(dred && D3D12_Debug_EnableDRED())
+  if(dred &&
+     (D3D12_Debug_EnableDRED() || Process::GetEnvVariable("RDOC_CAPTURE_DRED") == "1"))
   {
     RDCLOG("Enabling DRED");
 
@@ -433,6 +434,7 @@ bool EnableDRED(D3D12DevConfiguration *devConfig, PFN_D3D12_GET_DEBUG_INTERFACE 
     return true;
   }
 
+  SAFE_RELEASE(dred);
   return false;
 }
 

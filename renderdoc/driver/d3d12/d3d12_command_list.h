@@ -180,6 +180,7 @@ private:
   // for ray dispatching we need to patch the tables on the GPU which requires pushing & popping
   // compute pipeline and root signature, so we track it here during capture
   D3D12RenderState m_CaptureComputeState;
+  void CaptureDiagnosticUAV(bool beforeDispatch);
 
   // the ray dispatches which have happened on this list, this keeps a reference on the buffers until
   // the list is reset, and each time the list is submitted the queue takes an additional reference

@@ -309,6 +309,8 @@ HRESULT WrappedID3D12Device::CreatePipelineState(const D3D12_PIPELINE_STATE_STRE
   if(SUCCEEDED(ret))
   {
     WrappedID3D12PipelineState *wrapped = new WrappedID3D12PipelineState(ResourceId(), real, this);
+    DXBC::DXBCContainer::GetHash(wrapped->captureComputeHash, false,
+                               expandedDesc.CS.pShaderBytecode, expandedDesc.CS.BytecodeLength);
 
     if(IsCaptureMode(m_State))
     {

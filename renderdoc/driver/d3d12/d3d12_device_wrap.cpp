@@ -960,6 +960,8 @@ void WrappedID3D12Device::ProcessCreatedComputePSO(ID3D12PipelineState *real, ui
     m_UsedDXIL = true;
 
   WrappedID3D12PipelineState *wrapped = new WrappedID3D12PipelineState(ResourceId(), real, this);
+  DXBC::DXBCContainer::GetHash(wrapped->captureComputeHash, false, pDesc->CS.pShaderBytecode,
+                             pDesc->CS.BytecodeLength);
 
   if(IsCaptureMode(m_State))
   {

@@ -1947,6 +1947,7 @@ public:
                        ChunkAllocator *allocator = NULL, bool stealDataFromWriter = false);
 
   byte *GetData() const { return m_Data; }
+  uint64_t GetSize() const { return m_Length; }
   Chunk *Duplicate()
   {
     Chunk *ret = new Chunk();
