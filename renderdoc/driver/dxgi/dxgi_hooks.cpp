@@ -252,7 +252,10 @@ public:
 
     LibraryHooks::RegisterLibraryHook("dxgi.dll", NULL);
 
-    CreateDXGIFactory.Register("dxgi.dll", "CreateDXGIFactory", CreateDXGIFactory_hook);
+    if(HookLegacyFactory())
+      CreateDXGIFactory.Register("dxgi.dll", "CreateDXGIFactory", CreateDXGIFactory_hook);
+    else
+      RDCLOG("CreateDXGIFactory interception disabled by launch environment; Factory1/2 remain enabled");
     CreateDXGIFactory1.Register("dxgi.dll", "CreateDXGIFactory1", CreateDXGIFactory1_hook);
     CreateDXGIFactory2.Register("dxgi.dll", "CreateDXGIFactory2", CreateDXGIFactory2_hook);
     GetDebugInterface.Register("dxgi.dll", "DXGIGetDebugInterface", DXGIGetDebugInterface_hook);
@@ -266,6 +269,14 @@ public:
 
 private:
   static DXGIHook dxgihooks;
+
+  static bool HookLegacyFactory()
+  {
+    // Scope this to the selected launch. Applications using the older factory entry
+    // point still require its normal interception, so it stays enabled by default.
+    static const bool enabled = Process::GetEnvVariable("RENDERDOC_DXGI_HOOK_FACTORY0") != "0";
+    return enabled;
+  }
 
   RenderDocAnalysis m_RenderDocAnalysis;
   DummyDXGIInfoQueue m_DummyInfoQueue;
@@ -338,8 +349,23 @@ private:
                       (void *)&CreateDXGIFactory2Export_hook, (void **)&s_ExportRealCreateFactory2,
                       kPrefix2408, sizeof(kPrefix2408), 10};
 
-    ApplyExportPatch((HMODULE)handle, p0);
-    ApplyExportPatch((HMODULE)handle, p1);
+    // Other Windows builds begin Factory/Factory1 with mov [rsp+8], rbx,
+    // followed by a one-byte push. Relocate only the complete five-byte mov;
+    // the ten-byte layout above is not valid for that prologue.
+    if(HookLegacyFactory() && !ApplyExportPatch((HMODULE)handle, p0))
+    {
+      p0.expectedPrefix = kPrefix2408;
+      p0.expectedPrefixLen = sizeof(kPrefix2408);
+      p0.prologueBytes = sizeof(kPrefix2408);
+      ApplyExportPatch((HMODULE)handle, p0);
+    }
+    if(!ApplyExportPatch((HMODULE)handle, p1))
+    {
+      p1.expectedPrefix = kPrefix2408;
+      p1.expectedPrefixLen = sizeof(kPrefix2408);
+      p1.prologueBytes = sizeof(kPrefix2408);
+      ApplyExportPatch((HMODULE)handle, p1);
+    }
     ApplyExportPatch((HMODULE)handle, p2);
   }
 

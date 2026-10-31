@@ -115,10 +115,39 @@ private:
     // we should no longer go through here in the replay application
     RDCASSERT(!RenderDoc::Inst().IsReplayApp());
 
-    if(RenderDoc::Inst().GetCaptureOptions().apiValidation)
-      Flags |= D3D11_CREATE_DEVICE_DEBUG;
+    const bool preventLayerChanges =
+        (Flags & D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY) != 0;
+    // Keep the default capture opt-out, but allow an explicit per-launch override for
+    // applications which use this flag only to control registry-sourced debug layers.
+    // The flag and the application's debug-layer selection must still reach the runtime intact.
+    const bool captureOptOut =
+        Process::GetEnvVariable("RENDERDOC_D3D11_CAPTURE_OPTOUT") == "1";
+    if(preventLayerChanges && !captureOptOut)
+    {
+      // An opted-out device must retain the native creation contract, including the
+      // immediate context. The capture path below obtains that context from its wrapper,
+      // which does not exist when the application opts out.
+      HRESULT ret = real(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,
+                         SDKVersion, pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel,
+                         ppImmediateContext);
+      RDCLOG("Application requested not to be hooked. Native D3D11 creation returned %s; "
+             "capture is disabled for this device.",
+             ToStr(ret).c_str());
+      EndRecurse();
+      return ret;
+    }
+
+    if(!preventLayerChanges)
+    {
+      if(RenderDoc::Inst().GetCaptureOptions().apiValidation)
+        Flags |= D3D11_CREATE_DEVICE_DEBUG;
+      else
+        Flags &= ~D3D11_CREATE_DEVICE_DEBUG;
+    }
     else
-      Flags &= ~D3D11_CREATE_DEVICE_DEBUG;
+    {
+      RDCLOG("D3D11 capture opt-out override enabled; preserving creation flags 0x%x", Flags);
+    }
 
     DXGI_SWAP_CHAIN_DESC swapDesc;
     DXGI_SWAP_CHAIN_DESC *pUsedSwapDesc = NULL;
@@ -137,32 +166,17 @@ private:
     RDCDEBUG("Calling real createdevice...");
 
     // Hack for D3DGear which crashes if ppDevice is NULL
+    const bool needWrappedDevice = ppDevice || ppImmediateContext || ppSwapChain;
     ID3D11Device *dummydev = NULL;
-    bool dummyUsed = false;
     if(ppDevice == NULL)
-    {
       ppDevice = &dummydev;
-      dummyUsed = true;
-    }
 
     HRESULT ret = real(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,
                        SDKVersion, pUsedSwapDesc, ppSwapChain, ppDevice, pFeatureLevel, NULL);
 
-    SAFE_RELEASE(dummydev);
-    if(dummyUsed)
-      ppDevice = NULL;
-
     RDCDEBUG("Called real createdevice...");
 
-    bool suppress = false;
-
-    suppress = (Flags & D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY) != 0;
-
-    if(suppress)
-    {
-      RDCLOG("Application requested not to be hooked.");
-    }
-    else if(SUCCEEDED(ret) && ppDevice)
+    if(SUCCEEDED(ret) && *ppDevice && needWrappedDevice)
     {
       RDCDEBUG("succeeded and hooking.");
 
@@ -191,12 +205,16 @@ private:
     }
     else if(SUCCEEDED(ret))
     {
-      RDCLOG("Created wrapped D3D11 device.");
+      RDCDEBUG("D3D11 creation succeeded without a device requiring wrapping.");
     }
     else
     {
       RDCDEBUG("failed. HRESULT: %s", ToStr(ret).c_str());
     }
+
+    // Keep a temporary device alive until its requested context/swapchain has been
+    // returned. If it was wrapped above, dummydev now owns the wrapper's reference.
+    SAFE_RELEASE(dummydev);
 
     EndRecurse();
 

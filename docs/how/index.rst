@@ -4,6 +4,7 @@ How do I ...?
 .. toctree::
 
 	how_capture_frame
+	genshin_capture
 	how_android_capture
 	how_filter_events
 	how_debug_shader

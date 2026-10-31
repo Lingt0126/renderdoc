@@ -1,0 +1,30 @@
+{
+  "rdocCaptureSettings": 1,
+  "settings": {
+    "autoStart": false,
+    "commandLine": "",
+    "environment": [
+      { "variable": "RENDERDOC_DXGI_HOOK_FACTORY0", "value": "0", "type": "Set", "separator": "NoSep" },
+      { "variable": "RENDERDOC_D3D11_CAPTURE_OPTOUT", "value": "1", "type": "Set", "separator": "NoSep" }
+    ],
+    "executable": "E:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen.exe",
+    "workingDir": "E:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game",
+    "inject": false,
+    "numQueuedFrames": 0,
+    "queuedFrameCap": 0,
+    "options": {
+      "allowFullscreen": true,
+      "allowVSync": true,
+      "apiValidation": false,
+      "captureAllCmdLists": false,
+      "captureCallstacks": false,
+      "captureCallstacksOnlyDraws": false,
+      "debugOutputMute": true,
+      "delayForDebugger": 0,
+      "hookIntoChildren": false,
+      "refAllResources": false,
+      "softMemoryLimit": 0,
+      "verifyBufferAccess": false
+    }
+  }
+}

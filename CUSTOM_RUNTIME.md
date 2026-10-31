@@ -1,5 +1,7 @@
 # 本机 RenderDoc 修复与验证（2026-09-23）
 
+原神的最新使用方法见 [Windows D3D11 捕获说明](docs/how/genshin_capture.rst)。该流程使用本仓库的 `x64/Development` 构建及 `Genshin.cap`，与下文历史部署路径分开验证。
+
 ## 日常使用
 
 运行桌面的 **RenderDoc Custom**，或 `C:\RenderDocCustom\qrenderdoc.exe`。
