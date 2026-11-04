@@ -1,0 +1,3414 @@
+--- /dev/null
++++ b/Directory.Build.props
+@@ -0,0 +1,14 @@
++<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++  <!-- Keep PCH producer and all consumers consistent. Source paths are build-local. -->
++  <PropertyGroup>
++    <CompatTrimRoot>$(SolutionDir)renderdoc\</CompatTrimRoot>
++    <CompatTrimRoot Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\qrenderdoc'))">$(SolutionDir)qrenderdoc\</CompatTrimRoot>
++    <CompatTrimRoot Condition="'$(MSBuildProjectName)'=='renderdoccmd'">$(SolutionDir)renderdoccmd\</CompatTrimRoot>
++    <CompatTrimRoot Condition="'$(MSBuildProjectName)'=='renderdocshim'">$(SolutionDir)renderdocshim\</CompatTrimRoot>
++  </PropertyGroup>
++  <ItemDefinitionGroup>
++    <ClCompile>
++      <AdditionalOptions>/d1trimfile:$(CompatTrimRoot) %(AdditionalOptions)</AdditionalOptions>
++    </ClCompile>
++  </ItemDefinitionGroup>
++</Project>
+--- a/qrenderdoc/Windows/Dialogs/CrashDialog.cpp
++++ b/qrenderdoc/Windows/Dialogs/CrashDialog.cpp
+@@ -207,9 +207,9 @@
+ #if defined(Q_OS_WIN32)
+ #if QT_POINTER_SIZE == 8
+     text +=
+-        tr("you have libcrypto-1_1-64.dll and libssl-1_1-64.dll available next to qrenderdoc.exe.");
++        tr("you have libcrypto-1_1-64.dll and libssl-1_1-64.dll available next to qrendertest.exe.");
+ #else
+-    text += tr("you have libcrypto-1_1.dll and libssl-1_1.dll available next to qrenderdoc.exe.");
++    text += tr("you have libcrypto-1_1.dll and libssl-1_1.dll available next to qrendertest.exe.");
+ #endif
+ #else
+     text += tr("you have the runtime libopenssl library >= 1.1.1 available in your system.");
+@@ -218,7 +218,7 @@
+ #else
+ 
+ #if defined(Q_OS_WIN32)
+-    text += tr("you have libeay32.dll and ssleay32.dll available next to qrenderdoc.exe.");
++    text += tr("you have libeay32.dll and ssleay32.dll available next to qrendertest.exe.");
+ #else
+     text += tr("you have the runtime libopenssl library >= 1.0.0 available in your system.");
+ #endif
+--- a/qrenderdoc/Windows/Dialogs/UpdateDialog.cpp
++++ b/qrenderdoc/Windows/Dialogs/UpdateDialog.cpp
+@@ -256,7 +256,7 @@
+       bool success = true;
+ 
+       QString dll = lit("renderdoc.dll");
+-      QString cmd = lit("renderdoccmd.exe");
++      QString cmd = lit("rendertestcmd.exe");
+ 
+       QFile::remove(dir.absoluteFilePath(dll));
+       QFile::remove(dir.absoluteFilePath(cmd));
+--- a/qrenderdoc/Windows/MainWindow.cpp
++++ b/qrenderdoc/Windows/MainWindow.cpp
+@@ -1244,7 +1244,7 @@
+   if(m_Ctx.Replay().CurrentRemote().IsValid())
+     prefix += tr("Remote: %1 - ").arg(m_Ctx.Replay().CurrentRemote().Name());
+ 
+-  QString text = prefix + lit("RenderDoc ");
++  QString text = prefix + lit("RenderTest ");
+ 
+   if(RENDERDOC_STABLE_BUILD)
+     text += lit(FULL_VERSION_STRING);
+--- a/qrenderdoc/qrenderdoc_local.vcxproj
++++ b/qrenderdoc/qrenderdoc_local.vcxproj
+@@ -30,7 +30,7 @@
+     <ProjectGuid>{A14A6AE5-02B1-35FE-BE59-B3E7C273B40B}</ProjectGuid>
+     <RootNamespace>qrenderdoc</RootNamespace>
+     <Keyword>Qt4VSv1.0</Keyword>
+-    <ProjectName>qrenderdoc</ProjectName>
++    <ProjectName>qrendertest</ProjectName>
+   </PropertyGroup>
+   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+@@ -39,8 +39,8 @@
+     <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+     <CharacterSet>NotSet</CharacterSet>
+     <ConfigurationType>Application</ConfigurationType>
+-    <PrimaryOutput>qrenderdoc</PrimaryOutput>
+-    <TargetName>qrenderdoc</TargetName>
++    <PrimaryOutput>qrendertest</PrimaryOutput>
++    <TargetName>qrendertest</TargetName>
+     <IgnoreImportLibrary>true</IgnoreImportLibrary>
+     <SolutionRelativeIntDir>$(Platform)\$(Configuration)\obj\$(ProjectName)\</SolutionRelativeIntDir>
+   </PropertyGroup>
+--- a/qrenderdoc/renderdocui_stub.cpp
++++ b/qrenderdoc/renderdocui_stub.cpp
+@@ -57,7 +57,7 @@
+     w++;
+   }
+ 
+-  wcscat_s(curFile, 511, L"qrenderdoc.exe");
++  wcscat_s(curFile, 511, L"qrendertest.exe");
+ 
+   wcscpy_s(paramsAlloc, len, curFile);
+ 
+--- a/qrenderdoc/renderdocui_stub.vcxproj
++++ b/qrenderdoc/renderdocui_stub.vcxproj
+@@ -32,8 +32,8 @@
+     <OutputDirectory>$(SolutionDir)$(Platform)\$(Configuration)\</OutputDirectory>
+     <SolutionRelativeIntDir>$(Platform)\$(Configuration)\obj\$(ProjectName)\</SolutionRelativeIntDir>
+     <CharacterSet>Unicode</CharacterSet>
+-    <PrimaryOutput>renderdocui</PrimaryOutput>
+-    <TargetName>renderdocui</TargetName>
++    <PrimaryOutput>rendertestui</PrimaryOutput>
++    <TargetName>rendertestui</TargetName>
+   </PropertyGroup>
+   <PropertyGroup>
+     <IntDir>$(SolutionDir)$(SolutionRelativeIntDir)</IntDir>
+--- a/renderdoc/android/android.cpp
++++ b/renderdoc/android/android.cpp
+@@ -47,7 +47,7 @@
+ void adbForwardPorts(uint16_t portbase, const rdcstr &deviceID, uint16_t jdwpPort, int pid,
+                      bool silent)
+ {
+-  const char *forwardCommand = "forward tcp:%i localabstract:renderdoc_%i";
++  const char *forwardCommand = "forward tcp:%i localabstract:rendertest_%i";
+ 
+   adbExecCommand(deviceID,
+                  StringFormat::Fmt(forwardCommand, portbase + RenderDoc_ForwardRemoteServerOffset,
+@@ -337,7 +337,7 @@
+     return AndroidVersionCheckResult::Correct;
+   }
+ 
+-  RDCWARN("RenderDoc server versionCode:versionName (%s:%s) is incompatible with host (%s:%s)",
++  RDCWARN("RenderTest server versionCode:versionName (%s:%s) is incompatible with host (%s:%s)",
+           versionCode.c_str(), versionName.c_str(), hostVersionCode.c_str(), hostVersionName.c_str());
+ 
+   return AndroidVersionCheckResult::WrongVersion;
+@@ -472,11 +472,11 @@
+   {
+ #if RENDERDOC_OFFICIAL_BUILD
+     RETURN_ERROR_RESULT(ResultCode::AndroidAPKFolderNotFound,
+-                        "RenderDoc APK not found. Your build of RenderDoc may be incomplete.\n"
++                        "RenderTest APK not found. Your build of RenderTest may be incomplete.\n"
+                         "Check that your device is ARM based, other ABIs are not supported.");
+ #else
+     RETURN_ERROR_RESULT(ResultCode::AndroidAPKFolderNotFound,
+-                        "RenderDoc APK not found. Your build of RenderDoc is incomplete.\n"
++                        "RenderTest APK not found. Your build of RenderTest is incomplete.\n"
+                         "If this is a development build, consult the documentation for building "
+                         "the Android package.\n"
+                         "If this is a release build check that your device is ARM based, other "
+@@ -736,7 +736,7 @@
+       for(const rdcstr &line : lines)
+       {
+         // hide our own internal packages
+-        if(strstr(line.c_str(), "package:org.renderdoc."))
++        if(strstr(line.c_str(), "package:org.rendertest."))
+           continue;
+ 
+         if(!strncmp(line.c_str(), "package:", 8))
+@@ -1154,7 +1154,7 @@
+ 
+       rdcarray<Android::ABI> abis = Android::GetSupportedABIs(deviceID);
+ 
+-      RDCLOG("Starting RenderDoc server, supported ABIs:");
++      RDCLOG("Starting RenderTest server, supported ABIs:");
+       for(Android::ABI abi : abis)
+         RDCLOG("  - %s", ToStr(abi).c_str());
+ 
+@@ -1211,7 +1211,7 @@
+         if(result != ResultCode::Succeeded && result != ResultCode::AndroidGrantPermissionsFailed &&
+            result != ResultCode::AndroidAPKVerifyFailed)
+         {
+-          RDCERR("Failed to install RenderDoc server app");
++          RDCERR("Failed to install RenderTest server app");
+           return;
+         }
+       }
+@@ -1222,7 +1222,7 @@
+ 
+       // Attempt to prevent the user needing to click through on permissions
+       rdcstr auto_grant_permissions =
+-          Android::adbExecCommand(deviceID, "shell getprop debug.renderdoc.autograntpermissions")
++          Android::adbExecCommand(deviceID, "shell getprop debug.rendertest.autograntpermissions")
+               .strStdout.trimmed();
+       if(apiVersion >= 30 && atoi(auto_grant_permissions.c_str()) == 1)
+       {
+@@ -1247,15 +1247,15 @@
+       rdcstr folderName = Android::GetFolderName(deviceID);
+ 
+       // push settings file into our folder
+-      Android::adbExecCommand(deviceID, "push \"" + FileIO::GetAppFolderFilename("renderdoc.conf") +
++      Android::adbExecCommand(deviceID, "push \"" + FileIO::GetAppFolderFilename("rendertest.conf") +
+                                             "\" /sdcard/Android/" + folderName + package +
+-                                            "/files/renderdoc.conf");
++                                            "/files/rendertest.conf");
+ 
+       // launch the last ABI, as the 64-bit version where possible, or 32-bit version where not.
+       // Captures are portable across bitness and in some cases a 64-bit capture can't replay on a
+       // 32-bit remote server.
+       Android::adbExecCommand(
+-          deviceID, "shell am start -n " + package + "/.Loader -e renderdoccmd remoteserver");
++          deviceID, "shell am start -n " + package + "/.Loader -e rendertestcmd remoteserver");
+     });
+ 
+     // allow the package to start and begin listening before we return
+@@ -1502,13 +1502,13 @@
+     // set our property with the capture options encoded, to be picked up by the library on the
+     // device
+     Android::adbExecCommand(m_deviceID,
+-                            StringFormat::Fmt("shell setprop debug.rdoc.RENDERDOC_CAPOPTS %s",
++                            StringFormat::Fmt("shell setprop debug.rdoc.RENDERTEST_CAPOPTS %s",
+                                               opts.EncodeAsString().c_str()));
+ 
+     // try to push our settings file into the appdata folder
+-    Android::adbExecCommand(m_deviceID, "push \"" + FileIO::GetAppFolderFilename("renderdoc.conf") +
++    Android::adbExecCommand(m_deviceID, "push \"" + FileIO::GetAppFolderFilename("rendertest.conf") +
+                                             "\" /sdcard/Android/" + folderName + processName +
+-                                            "/files/renderdoc.conf");
++                                            "/files/rendertest.conf");
+ 
+     rdcstr installedPath = Android::GetPathForPackage(m_deviceID, packageName);
+ 
+--- a/renderdoc/android/android_utils.cpp
++++ b/renderdoc/android/android_utils.cpp
+@@ -396,7 +396,7 @@
+ 
+     // we assume that the logcat filters have worked, so ignore the logcat tag here. Just check if
+     // it's ours or not
+-    bool ownLog = !strncmp(&line[idx], "renderdoc", 9);
++    bool ownLog = !strncmp(&line[idx], "rendertest", 9);
+     while(idx < line.length() && line[idx] != '(')
+       idx++;
+ 
+@@ -719,7 +719,7 @@
+   //
+   // This gives us all messages from renderdoc since the last timestamp.
+   rdcstr command =
+-      StringFormat::Fmt("logcat -t %u -v brief -s renderdoc:* libc:* DEBUG:*", lineBacklog);
++      StringFormat::Fmt("logcat -t %u -v brief -s rendertest:* libc:* DEBUG:*", lineBacklog);
+ 
+   rdcstr logcat = Android::adbExecCommand(deviceID, command, ".", true).strStdout.trimmed();
+ 
+@@ -814,7 +814,7 @@
+     LogLine line;
+ 
+     const char *valid_text =
+-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
++        R"(I/rendertest( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
+ 
+     CHECK(line.parse(valid_text) == true);
+ 
+@@ -828,7 +828,7 @@
+     LogLine highpid;
+ 
+     const char *highpid_text =
+-        R"(I/renderdoc(12345678): @1234567812345678@ RDOC 12345678: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
++        R"(I/rendertest(12345678): @1234567812345678@ RDOC 12345678: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
+ 
+     CHECK(highpid.parse(highpid_text) == true);
+ 
+@@ -842,7 +842,7 @@
+     LogLine longname;
+ 
+     const char *longname_text =
+-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03] a_very_long_source_filename.cpp( 123) - Warning - Hello)";
++        R"(I/rendertest( 1234): @1234567812345678@ RDOC 001234: [01:02:03] a_very_long_source_filename.cpp( 123) - Warning - Hello)";
+ 
+     CHECK(longname.parse(longname_text) == true);
+ 
+@@ -856,7 +856,7 @@
+     LogLine longlinenum;
+ 
+     const char *longlinenum_text =
+-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp(12345678) - Warning - Hello)";
++        R"(I/rendertest( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp(12345678) - Warning - Hello)";
+ 
+     CHECK(longlinenum.parse(longlinenum_text) == true);
+ 
+@@ -871,7 +871,7 @@
+   SECTION("Invalid strings - truncated")
+   {
+     rdcstr truncated =
+-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - H)";
++        R"(I/rendertest( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - H)";
+ 
+     LogLine working;
+     CHECK(working.parse(truncated) == true);
+--- a/renderdoc/android/jdwp.cpp
++++ b/renderdoc/android/jdwp.cpp
+@@ -157,7 +157,7 @@
+     case Android::ABI::x86: libPath += "lib/x86"; break;
+   }
+ 
+-  RDCLOG("Injecting RenderDoc from library in %s", libPath.c_str());
++  RDCLOG("Injecting RenderTest from library in %s", libPath.c_str());
+ 
+   if(conn.IsErrored())
+     return false;
+--- a/renderdoc/api/replay/renderdoc_tostr.inl
++++ b/renderdoc/api/replay/renderdoc_tostr.inl
+@@ -52,16 +52,16 @@
+     STRINGISE_ENUM_CLASS_NAMED(UnknownError, "Unknown error");
+     STRINGISE_ENUM_CLASS_NAMED(InternalError, "Internal error");
+     STRINGISE_ENUM_CLASS_NAMED(FileNotFound, "File not found");
+-    STRINGISE_ENUM_CLASS_NAMED(InjectionFailed, "RenderDoc injection failed");
++    STRINGISE_ENUM_CLASS_NAMED(InjectionFailed, "RenderTest injection failed");
+     STRINGISE_ENUM_CLASS_NAMED(IncompatibleProcess,
+-                               "Process is incompatible with this build of RenderDoc");
++                               "Process is incompatible with this build of RenderTest");
+     STRINGISE_ENUM_CLASS_NAMED(NetworkIOFailed, "Network I/O operation failed");
+     STRINGISE_ENUM_CLASS_NAMED(NetworkRemoteBusy, "Remote side of network connection is busy");
+     STRINGISE_ENUM_CLASS_NAMED(NetworkVersionMismatch, "Incompatible version");
+     STRINGISE_ENUM_CLASS_NAMED(FileIOFailed, "File I/O failed");
+     STRINGISE_ENUM_CLASS_NAMED(
+         FileIncompatibleVersion,
+-        "Capture file incompatible due to being made on an different major version of RenderDoc");
++        "Capture file incompatible due to being made on an different major version of RenderTest");
+     STRINGISE_ENUM_CLASS_NAMED(FileCorrupted, "File is corrupted");
+     STRINGISE_ENUM_CLASS_NAMED(FileUnrecognised, "File format is unrecognised");
+     STRINGISE_ENUM_CLASS_NAMED(
+@@ -71,7 +71,7 @@
+                                "API initialisation failed while loading the capture");
+     STRINGISE_ENUM_CLASS_NAMED(
+         APIIncompatibleVersion,
+-        "Captured API data was made on a newer incompatible version of RenderDoc");
++        "Captured API data was made on a newer incompatible version of RenderTest");
+     STRINGISE_ENUM_CLASS_NAMED(
+         APIHardwareUnsupported,
+         "Current replaying hardware unsupported or incompatible with captured hardware");
+@@ -96,9 +96,9 @@
+     STRINGISE_ENUM_CLASS_NAMED(OutOfMemory, "Encountered an out of memory error");
+     STRINGISE_ENUM_CLASS_NAMED(DeviceLost, "Encountered a GPU device lost error");
+     STRINGISE_ENUM_CLASS_NAMED(DataNotAvailable,
+-                               "Data was requested through RenderDoc's API which is not available");
++                               "Data was requested through RenderTest's API which is not available");
+     STRINGISE_ENUM_CLASS_NAMED(InvalidParameter,
+-                               "An invalid parameter was passed to RenderDoc's API");
++                               "An invalid parameter was passed to RenderTest's API");
+     STRINGISE_ENUM_CLASS_NAMED(CompressionFailed, "Compression or decompression failed");
+     STRINGISE_ENUM_CLASS_NAMED(AndroidLayerConfFailed,
+                                "Debug layer configuration failed on Android");
+--- a/renderdoc/api/replay/version.h
++++ b/renderdoc/api/replay/version.h
+@@ -79,7 +79,7 @@
+ // If you're distributing builds for the public then do update this to point to your bugtracker or
+ // similar.
+ #if !defined(DISTRIBUTION_CONTACT)
+-// #define DISTRIBUTION_CONTACT "https://distribution.example/packages/renderdoc"
++// #define DISTRIBUTION_CONTACT "https://distribution.example/packages/rendertest"
+ #endif
+ 
+ ///////////////////////////////////////////////////////////////////////////////////////
+--- a/renderdoc/common/globalconfig.h
++++ b/renderdoc/common/globalconfig.h
+@@ -150,13 +150,13 @@
+   RenderDoc_ForwardPortStride = 10,
+ };
+ 
+-#define RENDERDOC_VULKAN_LAYER_NAME "VK_LAYER_RENDERDOC_Capture"
+-#define RENDERDOC_VULKAN_LAYER_VAR "ENABLE_VULKAN_RENDERDOC_CAPTURE"
+-
+-#define RENDERDOC_ANDROID_LIBRARY "libVkLayer_GLES_RenderDoc.so"
++#define RENDERDOC_VULKAN_LAYER_NAME "VK_LAYER_RENDERTEST_Capture"
++#define RENDERDOC_VULKAN_LAYER_VAR "ENABLE_VULKAN_RENDERTEST_CAPTURE"
++
++#define RENDERDOC_ANDROID_LIBRARY "libVkLayer_GLES_RenderTest.so"
+ 
+ // This MUST match the package name in the build process that generates per-architecture packages
+-#define RENDERDOC_ANDROID_PACKAGE_BASE "org.renderdoc.renderdoccmd"
++#define RENDERDOC_ANDROID_PACKAGE_BASE "org.rendertest.rendertestcmd"
+ 
+ /////////////////////////////////////////////////
+ // Debugging features configuration
+--- a/renderdoc/core/core.cpp
++++ b/renderdoc/core/core.cpp
+@@ -525,7 +525,7 @@
+ 
+   // only create crash handler when we're not in renderdoccmd (to prevent infinite loop as
+   // the crash handler itself launches renderdoccmd)
+-  if(exename.contains("renderdoccmd"))
++  if(exename.contains("rendertestcmd"))
+     return;
+ 
+ #if ENABLED(RDOC_WIN32)
+@@ -713,7 +713,7 @@
+       "Unknown";
+ #endif
+ 
+-  RDCLOG("RenderDoc v%s %s %s %s (%s) %s", MAJOR_MINOR_VERSION_STRING, platform,
++  RDCLOG("RenderTest v%s %s %s %s (%s) %s", MAJOR_MINOR_VERSION_STRING, platform,
+          sizeof(uintptr_t) == sizeof(uint64_t) ? "64-bit" : "32-bit",
+          ENABLED(RDOC_RELEASE) ? "Release" : "Development", GitVersionHash,
+          IsReplayApp() ? "loaded in replay application" : "capturing application");
+--- a/renderdoc/core/crash_handler.h
++++ b/renderdoc/core/crash_handler.h
+@@ -135,7 +135,7 @@
+ 
+     rdcstr cmdline = "\"";
+     cmdline += get_dirname(dllpath);
+-    cmdline += "/renderdoccmd.exe\" crashhandle --pipe ";
++    cmdline += "/rendertestcmd.exe\" crashhandle --pipe ";
+     cmdline += m_PipeName;
+ 
+     rdcwstr params = StringFormat::UTF82Wide(cmdline);
+--- a/renderdoc/core/remote_server.cpp
++++ b/renderdoc/core/remote_server.cpp
+@@ -308,7 +308,7 @@
+     reader.ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
+     writer.ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
+ 
+-    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderDoc/RemoteServer_Server.log";
++    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderTest/RemoteServer_Server.log";
+ 
+     RDCLOG("Logging remote server work to '%s'", filename.c_str());
+ 
+@@ -1137,7 +1137,7 @@
+   {
+     RDCLOG("No whitelist IP ranges configured - using default private IP ranges.");
+     RDCLOG(
+-        "Create a config file remoteserver.conf in ~/.renderdoc or %%APPDATA%%/renderdoc to "
++        "Create a config file remoteserver.conf in ~/.rendertest or %%APPDATA%%/rendertest to "
+         "narrow "
+         "this down or accept connections from more ranges.");
+ 
+@@ -1416,7 +1416,7 @@
+     reader->ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
+     writer->ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
+ 
+-    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderDoc/RemoteServer_Client.log";
++    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderTest/RemoteServer_Client.log";
+ 
+     RDCLOG("Logging remote server work to '%s'", filename.c_str());
+ 
+--- a/renderdoc/core/settings.cpp
++++ b/renderdoc/core/settings.cpp
+@@ -466,7 +466,7 @@
+ 
+ void RenderDoc::ProcessConfig()
+ {
+-  rdcstr confFile = FileIO::GetAppFolderFilename("renderdoc.conf");
++  rdcstr confFile = FileIO::GetAppFolderFilename("rendertest.conf");
+ 
+   RDCLOG("Loading config from %s", confFile.c_str());
+ 
+@@ -516,7 +516,7 @@
+ {
+   if(IsReplayApp())
+   {
+-    rdcstr confFile = FileIO::GetAppFolderFilename("renderdoc.conf");
++    rdcstr confFile = FileIO::GetAppFolderFilename("rendertest.conf");
+ 
+     bool success = false;
+ 
+--- a/renderdoc/data/glsl/fixedcol.frag
++++ b/renderdoc/data/glsl/fixedcol.frag
+@@ -43,7 +43,7 @@
+ layout(location = 99)
+ #endif
+ 
+-    uniform vec4 RENDERDOC_Fixed_Color;
++    uniform vec4 RENDERTEST_Fixed_Color;
+ 
+ #endif
+ 
+@@ -56,6 +56,6 @@
+   // on the fly to replace these constants
+   color_out = vec4(1.1f, 2.2f, 3.3f, 4.4f);
+ #else
+-  color_out = RENDERDOC_Fixed_Color;
++  color_out = RENDERTEST_Fixed_Color;
+ #endif
+ }
+--- a/renderdoc/data/hlsl/d3d12_pixelhistory.hlsl
++++ b/renderdoc/data/hlsl/d3d12_pixelhistory.hlsl
+@@ -57,9 +57,9 @@
+ RWBuffer<uint> copyout_uint : register(u3);
+ RWBuffer<int> copyout_int : register(u4);
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryUnused() { copyout_depth[dst_slot] = -1.0f; }
++[numthreads(1, 1, 1)] void RENDERTEST_PixelHistoryUnused() { copyout_depth[dst_slot] = -1.0f; }
+ 
+-    [numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryCopyPixel()
++    [numthreads(1, 1, 1)] void RENDERTEST_PixelHistoryCopyPixel()
+ {
+   if(multisampled)
+   {
+@@ -143,7 +143,7 @@
+   }
+ }
+ 
+-float4 RENDERDOC_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
++float4 RENDERTEST_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
+ {
+   return asfloat(prim).xxxx;
+ }
+@@ -171,7 +171,7 @@
+ #endif
+ };
+ 
+-SelectedOutput RENDERDOC_PixelHistoryFixedColPS()
++SelectedOutput RENDERTEST_PixelHistoryFixedColPS()
+ {
+   SelectedOutput OUT = (SelectedOutput)0;
+ 
+--- a/renderdoc/data/hlsl/depth_copy.hlsl
++++ b/renderdoc/data/hlsl/depth_copy.hlsl
+@@ -28,7 +28,7 @@
+   uint4 viewData;    // viewIndex, ???, ???, ???
+ };
+ 
+-void RENDERDOC_DepthCopyPS(float4 pos : SV_Position, out float depth : SV_Depth)
++void RENDERTEST_DepthCopyPS(float4 pos : SV_Position, out float depth : SV_Depth)
+ {
+   int2 srcCoord = int2(pos.xy);
+   depth = srcDepth.Load(int3(srcCoord, 0)).r;
+@@ -36,7 +36,7 @@
+ 
+ Texture2DArray<float2> srcDepthArray : register(t0);
+ 
+-void RENDERDOC_DepthCopyArrayPS(float4 pos : SV_Position, out float depth : SV_Depth)
++void RENDERTEST_DepthCopyArrayPS(float4 pos : SV_Position, out float depth : SV_Depth)
+ {
+   int2 srcCoord = int2(pos.xy);
+   depth = srcDepthArray.Load(int4(srcCoord, viewData.x, 0)).r;
+@@ -44,7 +44,7 @@
+ 
+ Texture2DMS<float2> srcDepthMS : register(t0);
+ 
+-void RENDERDOC_DepthCopyMSPS(float4 pos
++void RENDERTEST_DepthCopyMSPS(float4 pos
+                              : SV_Position, uint sample
+                              : SV_SampleIndex, out float depth
+                              : SV_Depth)
+@@ -55,7 +55,7 @@
+ 
+ Texture2DMSArray<float2> srcDepthMSArray : register(t0);
+ 
+-void RENDERDOC_DepthCopyMSArrayPS(float4 pos
++void RENDERTEST_DepthCopyMSArrayPS(float4 pos
+                                   : SV_Position, uint sample
+                                   : SV_SampleIndex, out float depth
+                                   : SV_Depth)
+--- a/renderdoc/data/hlsl/histogram.hlsl
++++ b/renderdoc/data/hlsl/histogram.hlsl
+@@ -34,7 +34,7 @@
+ RWBuffer<uint4> MinMaxDestUInt : register(u1);
+ RWBuffer<int4> MinMaxDestInt : register(u2);
+ 
+-[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERDOC_TileMinMaxCS(
++[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERTEST_TileMinMaxCS(
+     uint3 tid
+     : SV_GroupThreadID, uint3 gid
+     : SV_GroupID) {
+@@ -154,7 +154,7 @@
+ RWBuffer<uint4> MinMaxResultDestUInt : register(u1);
+ RWBuffer<int4> MinMaxResultDestInt : register(u2);
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_ResultMinMaxCS() {
++[numthreads(1, 1, 1)] void RENDERTEST_ResultMinMaxCS() {
+   uint3 texDim = uint3(HistogramTextureResolution);
+ 
+   uint blocksX = (int)ceil(float(texDim.x) / float(HGRAM_PIXELS_PER_TILE * HGRAM_TILES_PER_BLOCK));
+@@ -214,7 +214,7 @@
+ 
+ RWBuffer<uint> HistogramDest : register(u0);
+ 
+-[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERDOC_HistogramCS(
++[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERTEST_HistogramCS(
+     uint3 tid
+     : SV_GroupThreadID, uint3 gid
+     : SV_GroupID) {
+--- a/renderdoc/data/hlsl/mesh.hlsl
++++ b/renderdoc/data/hlsl/mesh.hlsl
+@@ -174,7 +174,7 @@
+   return col;
+ }
+ 
+-meshV2F RENDERDOC_MeshVS(meshA2V IN, uint vid : SV_VertexID)
++meshV2F RENDERTEST_MeshVS(meshA2V IN, uint vid : SV_VertexID)
+ {
+   meshV2F OUT = (meshV2F)0;
+ 
+@@ -211,7 +211,7 @@
+   float4 viewport;
+ };
+ 
+-[maxvertexcount(3)] void RENDERDOC_TriangleSizeGS(triangle meshV2F input[3],
++[maxvertexcount(3)] void RENDERTEST_TriangleSizeGS(triangle meshV2F input[3],
+                                                   inout TriangleStream<triSizeV2F> TriStream) {
+   triSizeV2F output;
+ 
+@@ -240,13 +240,13 @@
+   TriStream.RestartStrip();
+ }
+ 
+-float4 RENDERDOC_TriangleSizePS(triSizeV2F IN)
++float4 RENDERTEST_TriangleSizePS(triSizeV2F IN)
+     : SV_Target0
+ {
+   return float4(max(IN.pixarea, 0.001f).xxx, 1.0f);
+ }
+ 
+-[maxvertexcount(3)] void RENDERDOC_MeshGS(triangle meshV2F input[3],
++[maxvertexcount(3)] void RENDERTEST_MeshGS(triangle meshV2F input[3],
+                                           inout TriangleStream<meshV2F> TriStream) {
+   meshV2F output;
+ 
+@@ -264,7 +264,7 @@
+   TriStream.RestartStrip();
+ }
+ 
+-float4 RENDERDOC_MeshPS(meshV2F IN)
++float4 RENDERTEST_MeshPS(meshV2F IN)
+     : SV_Target0
+ {
+   uint type = MeshDisplayFormat;
+@@ -453,7 +453,7 @@
+   }
+ }
+ 
+-[numthreads(1024, 1, 1)] void RENDERDOC_MeshPickCS(uint3 tid
++[numthreads(1024, 1, 1)] void RENDERTEST_MeshPickCS(uint3 tid
+                                                    : SV_DispatchThreadID) {
+   if(PickMeshMode == MESH_OTHER)
+   {
+--- a/renderdoc/data/hlsl/misc.hlsl
++++ b/renderdoc/data/hlsl/misc.hlsl
+@@ -37,7 +37,7 @@
+   float4 col7 : SV_Target7;
+ };
+ 
+-float4 RENDERDOC_FullscreenVS(uint id : SV_VertexID) : SV_Position
++float4 RENDERTEST_FullscreenVS(uint id : SV_VertexID) : SV_Position
+ {
+   float4 pos[] = {float4(-1.0f, 1.0f, 0.0f, 1.0f), float4(3.0f, 1.0f, 0.0f, 1.0f),
+                   float4(-1.0f, -3.0f, 0.0f, 1.0f)};
+@@ -50,7 +50,7 @@
+   float4 overlaycol;
+ };
+ 
+-MultipleOutput RENDERDOC_FixedColPS()
++MultipleOutput RENDERTEST_FixedColPS()
+ {
+   MultipleOutput OUT = (MultipleOutput)0;
+ 
+@@ -59,7 +59,7 @@
+   return OUT;
+ }
+ 
+-float4 RENDERDOC_CheckerboardPS(float4 pos : SV_Position) : SV_Target0
++float4 RENDERTEST_CheckerboardPS(float4 pos : SV_Position) : SV_Target0
+ {
+   float2 RectRelativePos = pos.xy - RectPosition;
+ 
+@@ -96,7 +96,7 @@
+   uint discardPass;
+ };
+ 
+-float4 RENDERDOC_DiscardFloatPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
++float4 RENDERTEST_DiscardFloatPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
+ {
+   uint x = uint(pos.x) % PATTERN_WIDTH;
+   uint y = uint(pos.y) % PATTERN_HEIGHT;
+@@ -115,7 +115,7 @@
+   return val.xxxx;
+ }
+ 
+-uint4 RENDERDOC_DiscardIntPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
++uint4 RENDERTEST_DiscardIntPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
+ {
+   uint x = uint(pos.x) % PATTERN_WIDTH;
+   uint y = uint(pos.y) % PATTERN_HEIGHT;
+@@ -176,7 +176,7 @@
+   return addr;
+ }
+ 
+-[numthreads(128, 1, 1)] void RENDERDOC_ExecuteIndirectPatchCS(uint idx
++[numthreads(128, 1, 1)] void RENDERTEST_ExecuteIndirectPatchCS(uint idx
+                                                               : SV_GroupIndex) {
+   if(idx < argCount)
+   {
+--- a/renderdoc/data/hlsl/multisample.hlsl
++++ b/renderdoc/data/hlsl/multisample.hlsl
+@@ -41,7 +41,7 @@
+ Texture2DMSArray<uint4, 16> sourceMS16 : register(t4);
+ Texture2DMSArray<uint4, 32> sourceMS32 : register(t5);
+ 
+-uint4 RENDERDOC_CopyMSToArray(float4 pos : SV_Position) : SV_Target0
++uint4 RENDERTEST_CopyMSToArray(float4 pos : SV_Position) : SV_Target0
+ {
+   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
+ 
+@@ -75,7 +75,7 @@
+ Texture2DMSArray<float4, 16> sourceFloatMS16 : register(t4);
+ Texture2DMSArray<float4, 32> sourceFloatMS32 : register(t5);
+ 
+-float4 RENDERDOC_FloatCopyMSToArray(float4 pos : SV_Position) : SV_Target0
++float4 RENDERTEST_FloatCopyMSToArray(float4 pos : SV_Position) : SV_Target0
+ {
+   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
+ 
+@@ -115,7 +115,7 @@
+ Texture2DMSArray<uint2, 16> sourceStencilMS16 : register(t14);
+ Texture2DMSArray<uint2, 32> sourceStencilMS32 : register(t15);
+ 
+-float RENDERDOC_DepthCopyMSToArray(float4 pos : SV_Position) : SV_Depth
++float RENDERTEST_DepthCopyMSToArray(float4 pos : SV_Position) : SV_Depth
+ {
+   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
+ 
+@@ -174,7 +174,7 @@
+ 
+ Texture2DArray<uint4> sourceArray : register(t1);
+ 
+-uint4 RENDERDOC_CopyArrayToMS(float4 pos
++uint4 RENDERTEST_CopyArrayToMS(float4 pos
+                               : SV_Position, uint curSample
+                               : SV_SampleIndex)
+     : SV_Target0
+@@ -186,7 +186,7 @@
+ 
+ Texture2DArray<float4> sourceFloatArray : register(t1);
+ 
+-float4 RENDERDOC_FloatCopyArrayToMS(float4 pos
++float4 RENDERTEST_FloatCopyArrayToMS(float4 pos
+                                     : SV_Position, uint curSample
+                                     : SV_SampleIndex)
+     : SV_Target0
+@@ -199,7 +199,7 @@
+ Texture2DArray<float2> sourceDepthArray : register(t1);
+ Texture2DArray<uint2> sourceStencilArray : register(t11);
+ 
+-float RENDERDOC_DepthCopyArrayToMS(float4 pos
++float RENDERTEST_DepthCopyArrayToMS(float4 pos
+                                    : SV_Position, uint curSample
+                                    : SV_SampleIndex)
+     : SV_Depth
+--- a/renderdoc/data/hlsl/pixelhistory.hlsl
++++ b/renderdoc/data/hlsl/pixelhistory.hlsl
+@@ -64,11 +64,11 @@
+ RWBuffer<uint4> copyout_uint : register(u2);
+ RWBuffer<int4> copyout_int : register(u3);
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryUnused() {
++[numthreads(1, 1, 1)] void RENDERTEST_PixelHistoryUnused() {
+   copyout_depth[dst_slot] = float4(-1.0f, -1.0f, 0.0f, 0.0f);
+ }
+ 
+-    [numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryCopyPixel()
++    [numthreads(1, 1, 1)] void RENDERTEST_PixelHistoryCopyPixel()
+ {
+   if(multisampled)
+   {
+@@ -142,7 +142,7 @@
+   }
+ }
+ 
+-float4 RENDERDOC_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
++float4 RENDERTEST_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
+ {
+   return asfloat(prim).xxxx;
+ }
+--- a/renderdoc/data/hlsl/quadoverdraw.hlsl
++++ b/renderdoc/data/hlsl/quadoverdraw.hlsl
+@@ -42,7 +42,7 @@
+ 
+ Texture2DArray<uint> overdrawSRV : register(t0);
+ 
+-[earlydepthstencil] void RENDERDOC_QuadOverdrawPS(float4 vpos
++[earlydepthstencil] void RENDERTEST_QuadOverdrawPS(float4 vpos
+                                                   : SV_Position, uint c0
+                                                   : SV_Coverage) {
+   // Obtain coverage for all pixels in the quad, via 'message passing'*.
+@@ -64,7 +64,7 @@
+   InterlockedAdd(overdrawUAV[quad], 1);
+ }
+ 
+-float4 RENDERDOC_QOResolvePS(float4 vpos
++float4 RENDERTEST_QOResolvePS(float4 vpos
+                              : SV_POSITION)
+     : SV_Target0
+ {
+--- a/renderdoc/data/hlsl/raytracing.hlsl
++++ b/renderdoc/data/hlsl/raytracing.hlsl
+@@ -48,7 +48,7 @@
+ }
+ 
+ // Each SV_GroupId corresponds to each of the BLAS (instance) in TLAS
+-[numthreads(1, 1, 1)] void RENDERDOC_PatchAccStructAddressCS(uint3 dispatchGroup
++[numthreads(1, 1, 1)] void RENDERTEST_PatchAccStructAddressCS(uint3 dispatchGroup
+                                                              : SV_GroupId) {
+   instanceDescs[dispatchGroup.x].blasAddress =
+       RemapCaptureToReplayAddress(instanceDescs[dispatchGroup.x].blasAddress);
+@@ -265,14 +265,14 @@
+ }
+ 
+ // Each SV_GroupId corresponds to one shader record to patch
+-[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERDOC_PatchShaderTableCS(uint3 dispatchThread
++[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERTEST_PatchShaderTableCS(uint3 dispatchThread
+                                                                            : SV_DispatchThreadID) {
+   if(dispatchThread.x < shaderrecord_count)
+     PatchTable(shaderrecord_stride * dispatchThread.x);
+ };
+ 
+ // Each SV_GroupId corresponds to one shader record to patch
+-[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERDOC_CopyShaderTableCS(uint3 dispatchThread
++[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERTEST_CopyShaderTableCS(uint3 dispatchThread
+                                                                           : SV_DispatchThreadID) {
+   if(dispatchThread.x < shaderrecord_count)
+   {
+@@ -329,7 +329,7 @@
+   return ret;
+ }
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_PrepareRayIndirectExecuteCS() {
++[numthreads(1, 1, 1)] void RENDERTEST_PrepareRayIndirectExecuteCS() {
+   uint numCommands = maxCommandCount;
+   if(numCommands & 0x80000000U)
+   {
+@@ -470,7 +470,7 @@
+ StructuredBuffer<uint2> applicationBLASPointers : register(t1);
+ RWStructuredBuffer<TLASCopyExecute> internalTLASCopyArguments : register(u0);
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_PrepareTLASCopyIndirectExecuteCS(uint3 dispatchThread
++[numthreads(1, 1, 1)] void RENDERTEST_PrepareTLASCopyIndirectExecuteCS(uint3 dispatchThread
+                                                                       : SV_DispatchThreadID) {
+   TLASCopyExecute execute = (TLASCopyExecute)0;
+   if(addressCount > 0)
+@@ -496,7 +496,7 @@
+ RWStructuredBuffer<InstanceDesc> copyDest : register(u0);
+ 
+ // Each SV_GroupId corresponds to one shader record to patch
+-[numthreads(1, 1, 1)] void RENDERDOC_CopyBLASInstanceCS(uint3 dispatchThread
++[numthreads(1, 1, 1)] void RENDERTEST_CopyBLASInstanceCS(uint3 dispatchThread
+                                                         : SV_DispatchThreadID) {
+   copyDest[blas_index] = copySource[0];
+ }
+--- a/renderdoc/data/hlsl/shaderdebug.hlsl
++++ b/renderdoc/data/hlsl/shaderdebug.hlsl
+@@ -33,7 +33,7 @@
+ 
+ RWStructuredBuffer<OutStruct> outBuf : register(u1);
+ 
+-[numthreads(1, 1, 1)] void RENDERDOC_DebugMathOp() {
++[numthreads(1, 1, 1)] void RENDERTEST_DebugMathOp() {
+   switch(mathOp)
+   {
+     case DEBUG_SAMPLE_MATH_DXBC_RCP: outBuf[0].outf[0] = rcp(mathInVal); break;
+@@ -66,7 +66,7 @@
+   }
+ }
+ 
+-void RENDERDOC_DebugSampleVS(uint id
++void RENDERTEST_DebugSampleVS(uint id
+                              : SV_VertexID, out float4 pos
+                              : SV_Position, out float4 uv
+                              : UVS)
+@@ -838,7 +838,7 @@
+   }
+ }
+ 
+-void RENDERDOC_DebugSamplePS(in float4 pos : SV_Position, in float4 uv : UVS)
++void RENDERTEST_DebugSamplePS(in float4 pos : SV_Position, in float4 uv : UVS)
+ {
+   int opcode = debugSampleOperation;
+ 
+--- a/renderdoc/data/hlsl/texdisplay.hlsl
++++ b/renderdoc/data/hlsl/texdisplay.hlsl
+@@ -39,7 +39,7 @@
+   float4 tex : TEXCOORD0;
+ };
+ 
+-v2f RENDERDOC_TexDisplayVS(uint vertID : SV_VertexID)
++v2f RENDERTEST_TexDisplayVS(uint vertID : SV_VertexID)
+ {
+   v2f OUT = (v2f)0;
+ 
+@@ -64,7 +64,7 @@
+ // for the type and applies things like the range check and channel masking.
+ // It also does a couple of overlays that we can get 'free' like NaN/inf checks
+ // or range clipping
+-float4 RENDERDOC_TexDisplayPS(v2f IN) : SV_Target0
++float4 RENDERTEST_TexDisplayPS(v2f IN) : SV_Target0
+ {
+   bool uintTex = OutputDisplayFormat & TEXDISPLAY_UINT_TEX;
+   bool sintTex = OutputDisplayFormat & TEXDISPLAY_SINT_TEX;
+--- a/renderdoc/data/hlsl/texremap.hlsl
++++ b/renderdoc/data/hlsl/texremap.hlsl
+@@ -31,7 +31,7 @@
+   float4 tex : TEXCOORD0;
+ };
+ 
+-float4 RENDERDOC_TexRemapFloat(v2f IN) : SV_Target0
++float4 RENDERTEST_TexRemapFloat(v2f IN) : SV_Target0
+ {
+   float4 ret = SampleTextureFloat4(OutputDisplayFormat & TEXDISPLAY_TYPEMASK,
+                                    (ScalePS < 1 && MipLevel == 0), IN.tex.xy, Slice, MipLevel,
+@@ -42,13 +42,13 @@
+   return ret;
+ }
+ 
+-uint4 RENDERDOC_TexRemapUInt(v2f IN) : SV_Target0
++uint4 RENDERTEST_TexRemapUInt(v2f IN) : SV_Target0
+ {
+   return SampleTextureUInt4(OutputDisplayFormat & TEXDISPLAY_TYPEMASK, IN.tex.xy, Slice, MipLevel,
+                             SampleIdx, TextureResolutionPS);
+ }
+ 
+-int4 RENDERDOC_TexRemapSInt(v2f IN) : SV_Target0
++int4 RENDERTEST_TexRemapSInt(v2f IN) : SV_Target0
+ {
+   return SampleTextureInt4(OutputDisplayFormat & TEXDISPLAY_TYPEMASK, IN.tex.xy, Slice, MipLevel,
+                            SampleIdx, TextureResolutionPS);
+--- a/renderdoc/data/hlsl/text.hlsl
++++ b/renderdoc/data/hlsl/text.hlsl
+@@ -65,7 +65,7 @@
+   return OUT;
+ }
+ 
+-v2f RENDERDOC_TextVS(uint vid : SV_VertexID, uint inst : SV_InstanceID)
++v2f RENDERTEST_TextVS(uint vid : SV_VertexID, uint inst : SV_InstanceID)
+ {
+   // easy-mode on FL10 and up, use vertex/instance index
+   float2 verts[] = {
+@@ -78,7 +78,7 @@
+   return Text(verts[vid], int(inst), chars[inst].x);
+ }
+ 
+-v2f RENDERDOC_Text9VS(float4 pos : POSITION)
++v2f RENDERTEST_Text9VS(float4 pos : POSITION)
+ {
+   // hard mode on FL9, fetch from vertex inputs
+   return Text(pos.xy, int(pos.z + 0.1f), int(pos.w + 0.1f));
+@@ -89,7 +89,7 @@
+ 
+ Texture2D fontTexture : register(t0);
+ 
+-float4 RENDERDOC_TextPS(v2f IN) : SV_Target0
++float4 RENDERTEST_TextPS(v2f IN) : SV_Target0
+ {
+   float text = 0;
+ 
+--- a/renderdoc/driver/d3d11/d3d11_context_wrap.cpp
++++ b/renderdoc/driver/d3d11/d3d11_context_wrap.cpp
+@@ -4312,7 +4312,7 @@
+                                      MessageSource::IncorrectAPIUse,
+                                      "Call to DrawAuto may be inaccurate if topology or vertex "
+                                      "stride has changed between stream-out and draw.\n"
+-                                     "Recapture with this version of RenderDoc to fix this "
++                                     "Recapture with this version of RenderTest to fix this "
+                                      "problem, this capture was created with an older version.");
+ 
+           if(m_CurrentPipelineState->IA.Topo == D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)
+--- a/renderdoc/driver/d3d11/d3d11_debug.cpp
++++ b/renderdoc/driver/d3d11/d3d11_debug.cpp
+@@ -157,24 +157,24 @@
+   if(m_pDevice->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0)
+   {
+     CopyMSToArrayPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_CopyMSToArray", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_CopyMSToArray", "ps_5_0");
+     InternalRef(CopyMSToArrayPS);
+     CopyArrayToMSPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_CopyArrayToMS", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_CopyArrayToMS", "ps_5_0");
+     InternalRef(CopyArrayToMSPS);
+     FloatCopyMSToArrayPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_FloatCopyMSToArray", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_FloatCopyMSToArray", "ps_5_0");
+     InternalRef(FloatCopyMSToArrayPS);
+     FloatCopyArrayToMSPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_FloatCopyArrayToMS", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_FloatCopyArrayToMS", "ps_5_0");
+     InternalRef(FloatCopyArrayToMSPS);
+     DepthCopyMSToArrayPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_DepthCopyMSToArray", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_DepthCopyMSToArray", "ps_5_0");
+     InternalRef(DepthCopyMSToArrayPS);
+     DepthCopyArrayToMSPS =
+-        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERDOC_DepthCopyArrayToMS", "ps_5_0");
++        shaderCache->MakePShader(multisamplehlsl.c_str(), "RENDERTEST_DepthCopyArrayToMS", "ps_5_0");
+     InternalRef(DepthCopyArrayToMSPS);
+-    MSArrayCopyVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_FullscreenVS", "vs_4_0");
++    MSArrayCopyVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_FullscreenVS", "vs_4_0");
+     InternalRef(MSArrayCopyVS);
+   }
+   else
+@@ -217,9 +217,9 @@
+     rdcstr hlsl = GetEmbeddedResource(pixelhistory_hlsl);
+ 
+     PixelHistoryUnusedCS =
+-        shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_PixelHistoryUnused", "cs_5_0");
++        shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_PixelHistoryUnused", "cs_5_0");
+     PixelHistoryCopyCS =
+-        shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_PixelHistoryCopyPixel", "cs_5_0");
++        shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_PixelHistoryCopyPixel", "cs_5_0");
+   }
+ 
+   RDCCOMPILE_ASSERT(eTexType_1D == RESTYPE_TEX1D, "Tex type enum doesn't match shader defines");
+@@ -286,9 +286,9 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+ 
+-    m_DiscardVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_FullscreenVS", "vs_4_0");
+-    m_DiscardFloatPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DiscardFloatPS", "ps_4_0");
+-    m_DiscardIntPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DiscardIntPS", "ps_4_0");
++    m_DiscardVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_FullscreenVS", "vs_4_0");
++    m_DiscardFloatPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DiscardFloatPS", "ps_4_0");
++    m_DiscardIntPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DiscardIntPS", "ps_4_0");
+ 
+     ResourceFormat fmt;
+     fmt.type = ResourceFormatType::Regular;
+@@ -1023,10 +1023,10 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+ 
+-    FullscreenVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_FullscreenVS", "vs_4_0");
+-
+-    FixedColPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_FixedColPS", "ps_4_0");
+-    CheckerboardPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_CheckerboardPS", "ps_4_0");
++    FullscreenVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_FullscreenVS", "vs_4_0");
++
++    FixedColPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_FixedColPS", "ps_4_0");
++    CheckerboardPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_CheckerboardPS", "ps_4_0");
+   }
+ }
+ 
+@@ -1050,16 +1050,16 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(texdisplay_hlsl);
+ 
+-    TexDisplayVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_TexDisplayVS", "vs_4_0");
+-    TexDisplayPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TexDisplayPS", "ps_5_0");
++    TexDisplayVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_TexDisplayVS", "vs_4_0");
++    TexDisplayPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TexDisplayPS", "ps_5_0");
+   }
+ 
+   {
+     rdcstr hlsl = GetEmbeddedResource(texremap_hlsl);
+ 
+-    TexRemapPS[0] = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TexRemapFloat", "ps_5_0");
+-    TexRemapPS[1] = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TexRemapUInt", "ps_5_0");
+-    TexRemapPS[2] = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TexRemapSInt", "ps_5_0");
++    TexRemapPS[0] = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TexRemapFloat", "ps_5_0");
++    TexRemapPS[1] = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TexRemapUInt", "ps_5_0");
++    TexRemapPS[2] = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TexRemapSInt", "ps_5_0");
+   }
+ 
+   {
+@@ -1132,31 +1132,31 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+ 
+-    FullscreenVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_FullscreenVS", "vs_4_0");
++    FullscreenVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_FullscreenVS", "vs_4_0");
+ 
+     hlsl = GetEmbeddedResource(quadoverdraw_hlsl);
+ 
+-    QuadOverdrawPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_QuadOverdrawPS", "ps_5_0");
+-    QOResolvePS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_QOResolvePS", "ps_5_0");
++    QuadOverdrawPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_QuadOverdrawPS", "ps_5_0");
++    QOResolvePS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_QOResolvePS", "ps_5_0");
+   }
+ 
+   {
+     rdcstr meshhlsl = GetEmbeddedResource(mesh_hlsl);
+ 
+     TriangleSizeGS =
+-        shaderCache->MakeGShader(meshhlsl.c_str(), "RENDERDOC_TriangleSizeGS", "gs_4_0");
++        shaderCache->MakeGShader(meshhlsl.c_str(), "RENDERTEST_TriangleSizeGS", "gs_4_0");
+     TriangleSizePS =
+-        shaderCache->MakePShader(meshhlsl.c_str(), "RENDERDOC_TriangleSizePS", "ps_4_0");
++        shaderCache->MakePShader(meshhlsl.c_str(), "RENDERTEST_TriangleSizePS", "ps_4_0");
+   }
+   {
+     rdcstr hlsl = GetEmbeddedResource(depth_copy_hlsl);
+ 
+-    DepthCopyPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DepthCopyPS", "ps_5_0");
++    DepthCopyPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DepthCopyPS", "ps_5_0");
+     DepthCopyArrayPS =
+-        shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DepthCopyArrayPS", "ps_5_0");
+-    DepthCopyMSPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DepthCopyMSPS", "ps_5_0");
++        shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DepthCopyArrayPS", "ps_5_0");
++    DepthCopyMSPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DepthCopyMSPS", "ps_5_0");
+     DepthCopyMSArrayPS =
+-        shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DepthCopyMSArrayPS", "ps_5_0");
++        shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DepthCopyMSArrayPS", "ps_5_0");
+   }
+   {
+     D3D11_BLEND_DESC blendDesc = {};
+@@ -1298,10 +1298,10 @@
+ 
+     rdcarray<byte> bytecode;
+ 
+-    MeshVS = shaderCache->MakeVShader(meshhlsl.c_str(), "RENDERDOC_MeshVS", "vs_4_0", 2,
++    MeshVS = shaderCache->MakeVShader(meshhlsl.c_str(), "RENDERTEST_MeshVS", "vs_4_0", 2,
+                                       inputDescSecondary, &GenericLayout, &bytecode);
+-    MeshGS = shaderCache->MakeGShader(meshhlsl.c_str(), "RENDERDOC_MeshGS", "gs_4_0");
+-    MeshPS = shaderCache->MakePShader(meshhlsl.c_str(), "RENDERDOC_MeshPS", "ps_4_0");
++    MeshGS = shaderCache->MakeGShader(meshhlsl.c_str(), "RENDERTEST_MeshGS", "gs_4_0");
++    MeshPS = shaderCache->MakePShader(meshhlsl.c_str(), "RENDERTEST_MeshPS", "ps_4_0");
+ 
+     MeshVSBytecode = new byte[bytecode.size()];
+     MeshVSBytelen = (uint32_t)bytecode.size();
+@@ -1413,7 +1413,7 @@
+ 
+   rdcstr meshhlsl = GetEmbeddedResource(mesh_hlsl);
+ 
+-  MeshPickCS = shaderCache->MakeCShader(meshhlsl.c_str(), "RENDERDOC_MeshPickCS", "cs_5_0");
++  MeshPickCS = shaderCache->MakeCShader(meshhlsl.c_str(), "RENDERTEST_MeshPickCS", "cs_5_0");
+ 
+   D3D11_BUFFER_DESC bDesc;
+ 
+@@ -1533,9 +1533,9 @@
+ 
+   rdcstr hlsl = GetEmbeddedResource(shaderdebug_hlsl);
+ 
+-  MathCS = shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_DebugMathOp", "cs_5_0");
+-  SampleVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_DebugSampleVS", "vs_5_0");
+-  SamplePS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DebugSamplePS", "ps_5_0");
++  MathCS = shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_DebugMathOp", "cs_5_0");
++  SampleVS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_DebugSampleVS", "vs_5_0");
++  SamplePS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DebugSamplePS", "ps_5_0");
+ 
+   D3D11_BUFFER_DESC bDesc;
+ 
+@@ -1651,7 +1651,7 @@
+                            offsets[1], offsets[2], hlsl.c_str());
+ 
+   ps = m_OffsetSamplePS[offsKey] =
+-      shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_DebugSamplePS", "ps_5_0");
++      shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_DebugSamplePS", "ps_5_0");
+ 
+   shaderCache->SetCaching(false);
+ 
+@@ -1791,12 +1791,12 @@
+       hlsl += histogramhlsl;
+ 
+       TileMinMaxCS[t][i] =
+-          shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_TileMinMaxCS", "cs_5_0");
+-      HistogramCS[t][i] = shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_HistogramCS", "cs_5_0");
++          shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_TileMinMaxCS", "cs_5_0");
++      HistogramCS[t][i] = shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_HistogramCS", "cs_5_0");
+ 
+       if(t == 1)
+         ResultMinMaxCS[i] =
+-            shaderCache->MakeCShader(hlsl.c_str(), "RENDERDOC_ResultMinMaxCS", "cs_5_0");
++            shaderCache->MakeCShader(hlsl.c_str(), "RENDERTEST_ResultMinMaxCS", "cs_5_0");
+     }
+   }
+ }
+@@ -1920,7 +1920,7 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(pixelhistory_hlsl);
+ 
+-    PrimitiveIDPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_PrimitiveIDPS", "ps_5_0");
++    PrimitiveIDPS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_PrimitiveIDPS", "ps_5_0");
+   }
+ }
+ 
+--- a/renderdoc/driver/d3d11/d3d11_device.cpp
++++ b/renderdoc/driver/d3d11/d3d11_device.cpp
+@@ -801,7 +801,7 @@
+   else if(riid == __uuidof(ID3D11InfoQueue))
+   {
+     RDCWARN(
+-        "Returning a dummy ID3D11InfoQueue that does nothing. RenderDoc takes control of the debug "
++        "Returning a dummy ID3D11InfoQueue that does nothing. RenderTest takes control of the debug "
+         "layer.");
+     RDCWARN(
+         "If you want direct access, enable API validation and query for %s. This will return the "
+@@ -836,9 +836,9 @@
+     {
+       if(!RenderDoc::Inst().GetCaptureOptions().apiValidation)
+       {
+-        RDCWARN("API Validation is not enabled, RenderDoc disabled the debug layer.");
++        RDCWARN("API Validation is not enabled, RenderTest disabled the debug layer.");
+         RDCWARN(
+-            "Enable this either in the capture options, or using the RenderDoc API before device "
++            "Enable this either in the capture options, or using the RenderTest API before device "
+             "creation.");
+       }
+       return E_NOINTERFACE;
+@@ -1586,13 +1586,13 @@
+   if(!partial)
+   {
+     RENDERDOC_PROFILEREGION("ApplyInitialContents");
+-    D3D11MarkerRegion apply("!!!!RenderDoc Internal: ApplyInitialContents");
++    D3D11MarkerRegion apply("!!!!RenderTest Internal: ApplyInitialContents");
+     GetResourceManager()->ApplyInitialContents();
+   }
+ 
+   m_State = CaptureState::ActiveReplaying;
+ 
+-  D3D11MarkerRegion::Set(StringFormat::Fmt("!!!!RenderDoc Internal: Replay %d (%d): %u->%u",
++  D3D11MarkerRegion::Set(StringFormat::Fmt("!!!!RenderTest Internal: Replay %d (%d): %u->%u",
+                                            (int)replayType, (int)partial, startEventID, endEventID));
+ 
+   m_ReplayEventCount = 0;
+@@ -1615,7 +1615,7 @@
+   for(int i = 0; i < m_ReplayEventCount; i++)
+     D3D11MarkerRegion::End();
+ 
+-  D3D11MarkerRegion::Set("!!!!RenderDoc Internal: Done replay");
++  D3D11MarkerRegion::Set("!!!!RenderTest Internal: Done replay");
+ 
+   if(m_pDevice->GetDeviceRemovedReason() != S_OK)
+     SET_ERROR_RESULT(m_FatalError, ResultCode::DeviceLost, "Device lost during replay: %s",
+--- a/renderdoc/driver/d3d11/d3d11_rendertext.cpp
++++ b/renderdoc/driver/d3d11/d3d11_rendertext.cpp
+@@ -242,12 +242,12 @@
+ 
+   if(m_pDevice->GetFeatureLevel() >= D3D_FEATURE_LEVEL_10_0)
+   {
+-    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_TextVS", "vs_4_0");
++    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_TextVS", "vs_4_0");
+ 
+     InternalRef(VS);
+     rm->SetInternalResource(VS);
+ 
+-    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TextPS", "ps_4_0");
++    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TextPS", "ps_4_0");
+ 
+     InternalRef(PS);
+     rm->SetInternalResource(PS);
+@@ -261,7 +261,7 @@
+ 
+     // if we're on 9_x feature levels, compile the shaders in 9_0 mode and switch to the downlevel
+     // vertex shader that expects vertex inputs directly rather than using SV_VertexID/SV_InstanceID
+-    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_Text9VS", "vs_4_0_level_9_0", 1, inputs,
++    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERTEST_Text9VS", "vs_4_0_level_9_0", 1, inputs,
+                                   &Layout);
+ 
+     InternalRef(VS);
+@@ -270,7 +270,7 @@
+     InternalRef(Layout);
+     rm->SetInternalResource(Layout);
+ 
+-    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TextPS", "ps_4_0_level_9_0");
++    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERTEST_TextPS", "ps_4_0_level_9_0");
+ 
+     InternalRef(PS);
+     rm->SetInternalResource(PS);
+--- a/renderdoc/driver/d3d11/d3d11_replay.cpp
++++ b/renderdoc/driver/d3d11/d3d11_replay.cpp
+@@ -4089,7 +4089,7 @@
+     {
+       RETURN_ERROR_RESULT(ResultCode::APIIncompatibleVersion,
+                           "D3D11 capture is incompatible version %llu, newest supported by this "
+-                          "build of RenderDoc is %llu",
++                          "build of RenderTest is %llu",
+                           ver, D3D11InitParams::CurrentVersion);
+     }
+ 
+@@ -4292,7 +4292,7 @@
+       if(SUCCEEDED(hr) && maxFeatureLevel < D3D_FEATURE_LEVEL_11_0)
+       {
+         RDCWARN(
+-            "Couldn't create FEATURE_LEVEL_11_0 device - RenderDoc requires FEATURE_LEVEL_11_0 "
++            "Couldn't create FEATURE_LEVEL_11_0 device - RenderTest requires FEATURE_LEVEL_11_0 "
+             "availability - falling back to WARP rasterizer");
+         useWarp = warpFallback = true;
+       }
+@@ -4446,7 +4446,7 @@
+     {
+       wrappedDev->AddDebugMessage(
+           MessageCategory::Initialization, MessageSeverity::High, MessageSource::RuntimeWarning,
+-          "Couldn't create FEATURE_LEVEL_11_0 device - RenderDoc requires FEATURE_LEVEL_11_0 "
++          "Couldn't create FEATURE_LEVEL_11_0 device - RenderTest requires FEATURE_LEVEL_11_0 "
+           "availability - falling back to WARP rasterizer.\n"
+           "Performance and usability will be significantly degraded.");
+     }
+@@ -4461,7 +4461,7 @@
+ 
+   if(flags & D3D11_CREATE_DEVICE_DEBUG)
+     error +=
+-        "\n\nDevelopment RenderDoc builds require D3D debug layers available, "
++        "\n\nDevelopment RenderTest builds require D3D debug layers available, "
+         "ensure you have the windows SDK or windows feature needed.";
+ 
+   RETURN_ERROR_RESULT(ResultCode::APIHardwareUnsupported, "%s", error.c_str());
+--- a/renderdoc/driver/d3d12/d3d12_debug.cpp
++++ b/renderdoc/driver/d3d12/d3d12_debug.cpp
+@@ -304,11 +304,11 @@
+   {
+     rdcstr meshhlsl = GetEmbeddedResource(mesh_hlsl);
+ 
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_MeshVS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_MeshVS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
+                                {}, "vs_5_0", &m_MeshVS);
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_MeshGS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_MeshGS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
+                                {}, "gs_5_0", &m_MeshGS);
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_MeshPS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_MeshPS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
+                                {}, "ps_5_0", &m_MeshPS);
+   }
+ 
+@@ -350,29 +350,29 @@
+   {
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_FullscreenVS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_FullscreenVS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &m_FullscreenVS);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DiscardFloatPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DiscardFloatPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_DiscardFloatPS);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DiscardIntPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DiscardIntPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_DiscardIntPS);
+   }
+ 
+   {
+     rdcstr multisamplehlsl = GetEmbeddedResource(multisample_hlsl);
+ 
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_CopyMSToArray",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_CopyMSToArray",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_IntMS2Array);
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_FloatCopyMSToArray",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_FloatCopyMSToArray",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_FloatMS2Array);
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_DepthCopyMSToArray",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_DepthCopyMSToArray",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_DepthMS2Array);
+ 
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_CopyArrayToMS",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_CopyArrayToMS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_IntArray2MS);
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_FloatCopyArrayToMS",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_FloatCopyArrayToMS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_FloatArray2MS);
+-    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERDOC_DepthCopyArrayToMS",
++    shaderCache->GetShaderBlob(multisamplehlsl.c_str(), "RENDERTEST_DepthCopyArrayToMS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &m_DepthArray2MS);
+   }
+ 
+@@ -393,7 +393,7 @@
+ 
+     rdcstr hlsl = GetEmbeddedResource(d3d12_pixelhistory_hlsl);
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PixelHistoryCopyPixel",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PixelHistoryCopyPixel",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &m_PixelHistoryCopyCS);
+ 
+     if(m_PixelHistoryCopyCS)
+@@ -436,7 +436,7 @@
+ 
+     ID3DBlob *eiPatchCS;
+ 
+-    shaderCache->GetShaderBlob(mischlsl.c_str(), "RENDERDOC_ExecuteIndirectPatchCS",
++    shaderCache->GetShaderBlob(mischlsl.c_str(), "RENDERTEST_ExecuteIndirectPatchCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &eiPatchCS);
+ 
+     RDCASSERT(eiPatchCS);
+@@ -665,7 +665,7 @@
+   D3D12RootSignature rootSig;
+ 
+   ID3DBlob *csBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugMathOp",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugMathOp",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0",
+                                                 &csBlob) != "")
+   {
+@@ -794,7 +794,7 @@
+   m_pDevice->CreateUnorderedAccessView(m_ShaderDebugResultBuffer, NULL, &uavDesc, uav);
+ 
+   ID3DBlob *vsBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSampleVS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSampleVS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0",
+                                                 &vsBlob) != "")
+   {
+@@ -804,7 +804,7 @@
+   }
+ 
+   ID3DBlob *psBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSamplePS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSamplePS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0",
+                                                 &psBlob) != "")
+   {
+@@ -854,7 +854,7 @@
+   if(m_pDevice->UsedDXIL())
+   {
+     ID3DBlob *dxilCsBlob = NULL;
+-    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugMathOp",
++    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugMathOp",
+                                                   D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_6_0",
+                                                   &dxilCsBlob) != "")
+     {
+@@ -887,7 +887,7 @@
+   if(m_pDevice->UsedDXIL())
+   {
+     ID3DBlob *dxilVsBlob = NULL;
+-    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSampleVS",
++    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSampleVS",
+                                                   D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_6_0",
+                                                   &dxilVsBlob) != "")
+     {
+@@ -933,7 +933,7 @@
+ 
+     ID3DBlob *dxilPsBlob = NULL;
+     rdcstr psSM = StringFormat::Fmt("ps_%d_%d", smMajor, smMinor);
+-    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSamplePS",
++    if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSamplePS",
+                                                   D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, psSM.c_str(),
+                                                   &dxilPsBlob) != "")
+     {
+@@ -984,7 +984,7 @@
+                            offsets[1], offsets[2], hlsl.c_str());
+ 
+   ID3DBlob *vsBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSampleVS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSampleVS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0",
+                                                 &vsBlob) != "")
+   {
+@@ -994,7 +994,7 @@
+   }
+ 
+   ID3DBlob *psBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSamplePS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSamplePS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0",
+                                                 &psBlob) != "")
+   {
+@@ -1069,7 +1069,7 @@
+                            offsets[1], offsets[2], hlsl.c_str());
+ 
+   ID3DBlob *vsBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSampleVS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSampleVS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_6_0",
+                                                 &vsBlob) != "")
+   {
+@@ -1080,7 +1080,7 @@
+   }
+ 
+   ID3DBlob *psBlob = NULL;
+-  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DebugSamplePS",
++  if(m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DebugSamplePS",
+                                                 D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_6_0",
+                                                 &psBlob) != "")
+   {
+@@ -2369,9 +2369,9 @@
+     ID3DBlob *FullscreenVS = NULL;
+     ID3DBlob *CheckerboardPS = NULL;
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_FullscreenVS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_FullscreenVS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &FullscreenVS);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_CheckerboardPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_CheckerboardPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &CheckerboardPS);
+ 
+     RDCASSERT(CheckerboardPS);
+@@ -2499,11 +2499,11 @@
+ 
+     ID3DBlob *TexDisplayPS = NULL;
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TexDisplayVS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TexDisplayVS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &VS);
+     RDCASSERT(VS);
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TexDisplayPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TexDisplayPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &TexDisplayPS);
+     RDCASSERT(TexDisplayPS);
+ 
+@@ -2590,13 +2590,13 @@
+         DXGI_FORMAT_R32G32B32A32_TYPELESS,
+     };
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TexRemapFloat",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TexRemapFloat",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &TexRemap[0]);
+     RDCASSERT(TexRemap[0]);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TexRemapUInt",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TexRemapUInt",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &TexRemap[1]);
+     RDCASSERT(TexRemap[1]);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TexRemapSInt",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TexRemapSInt",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &TexRemap[2]);
+     RDCASSERT(TexRemap[2]);
+ 
+@@ -2661,26 +2661,26 @@
+   {
+     rdcstr meshhlsl = GetEmbeddedResource(mesh_hlsl);
+ 
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_TriangleSizeGS",
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_TriangleSizeGS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "gs_5_0", &TriangleSizeGS);
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_TriangleSizePS",
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_TriangleSizePS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &TriangleSizePS);
+ 
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_MeshVS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_MeshVS", D3DCOMPILE_WARNINGS_ARE_ERRORS,
+                                {}, "vs_5_0", &MeshVS);
+ 
+     rdcstr hlsl = GetEmbeddedResource(quadoverdraw_hlsl);
+ 
+     hlsl = "#define D3D12 1\n\n" + hlsl;
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_QuadOverdrawPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_QuadOverdrawPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_1", &QuadOverdrawWritePS);
+ 
+     // only create DXIL shaders if DXIL was used by the application, since dxc/dxcompiler is really
+     // flakey.
+     if(device->UsedDXIL())
+     {
+-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_QuadOverdrawPS",
++      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_QuadOverdrawPS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_6_0",
+                                  &QuadOverdrawWriteDXILPS);
+ 
+@@ -2715,14 +2715,14 @@
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+ 
+     ID3DBlob *FullscreenVS = NULL;
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_FullscreenVS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_FullscreenVS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &FullscreenVS);
+     RDCASSERT(FullscreenVS);
+ 
+     hlsl = GetEmbeddedResource(quadoverdraw_hlsl);
+ 
+     ID3DBlob *QOResolvePS = NULL;
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_QOResolvePS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_QOResolvePS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &QOResolvePS);
+     RDCASSERT(QOResolvePS);
+ 
+@@ -2791,7 +2791,7 @@
+ 
+     ID3DBlob *FullscreenVS = NULL;
+     rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_FullscreenVS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_FullscreenVS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &FullscreenVS);
+     pipeDesc.VS.BytecodeLength = FullscreenVS->GetBufferSize();
+     pipeDesc.VS.pShaderBytecode = FullscreenVS->GetBufferPointer();
+@@ -2866,7 +2866,7 @@
+     ID3DBlob *FullscreenVS = NULL;
+     {
+       rdcstr hlsl = GetEmbeddedResource(misc_hlsl);
+-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_FullscreenVS",
++      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_FullscreenVS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "vs_5_0", &FullscreenVS);
+     }
+     pipeDesc.VS.BytecodeLength = FullscreenVS->GetBufferSize();
+@@ -2876,9 +2876,9 @@
+     ID3DBlob *DepthCopyMSPS = NULL;
+     {
+       rdcstr hlsl = GetEmbeddedResource(depth_copy_hlsl);
+-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DepthCopyPS",
++      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DepthCopyPS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &DepthCopyPS);
+-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_DepthCopyMSPS",
++      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_DepthCopyMSPS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &DepthCopyMSPS);
+     }
+ 
+@@ -3000,7 +3000,7 @@
+ 
+     ID3DBlob *meshPickCS;
+ 
+-    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERDOC_MeshPickCS",
++    shaderCache->GetShaderBlob(meshhlsl.c_str(), "RENDERTEST_MeshPickCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &meshPickCS);
+ 
+     RDCASSERT(meshPickCS);
+@@ -3149,20 +3149,20 @@
+ 
+   rdcstr hlsl = GetEmbeddedResource(d3d12_pixelhistory_hlsl);
+ 
+-  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrimitiveIDPS",
++  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PrimitiveIDPS",
+                              D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &PrimitiveIDPS);
+ 
+   for(int i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
+   {
+     rdcstr hlsl_variant = "#define RT " + ToStr(i) + "\n" + hlsl;
+-    shaderCache->GetShaderBlob(hlsl_variant.c_str(), "RENDERDOC_PixelHistoryFixedColPS",
++    shaderCache->GetShaderBlob(hlsl_variant.c_str(), "RENDERTEST_PixelHistoryFixedColPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_0", &FixedColorPS[i]);
+   }
+ 
+   // only create DXIL shaders if DXIL was used by the application to reduce the chance of failure
+   if(device->UsedDXIL())
+   {
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrimitiveIDPS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PrimitiveIDPS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_6_0", &PrimitiveIDPSDxil);
+ 
+     if(PrimitiveIDPSDxil == NULL)
+@@ -3180,7 +3180,7 @@
+     for(int i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
+     {
+       rdcstr hlsl_variant = "#define RT " + ToStr(i) + "\n" + hlsl;
+-      shaderCache->GetShaderBlob(hlsl_variant.c_str(), "RENDERDOC_PixelHistoryFixedColPS",
++      shaderCache->GetShaderBlob(hlsl_variant.c_str(), "RENDERTEST_PixelHistoryFixedColPS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_6_0", &FixedColorPSDxil[i]);
+       if(FixedColorPSDxil[i] == NULL)
+       {
+@@ -3260,7 +3260,7 @@
+         hlsl += rdcstr("#define SHADER_BASETYPE ") + ToStr(i) + "\n";
+         hlsl += histogramhlsl;
+ 
+-        shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TileMinMaxCS",
++        shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TileMinMaxCS",
+                                    D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &tile);
+ 
+         compPipeDesc.CS.BytecodeLength = tile->GetBufferSize();
+@@ -3274,7 +3274,7 @@
+           RDCERR("Couldn't create m_TileMinMaxPipe! HRESULT: %s", ToStr(hr).c_str());
+         }
+ 
+-        shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_HistogramCS",
++        shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_HistogramCS",
+                                    D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &histogram);
+ 
+         compPipeDesc.CS.BytecodeLength = histogram->GetBufferSize();
+@@ -3290,7 +3290,7 @@
+ 
+         if(t == 1)
+         {
+-          shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_ResultMinMaxCS",
++          shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_ResultMinMaxCS",
+                                      D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &result);
+ 
+           compPipeDesc.CS.BytecodeLength = result->GetBufferSize();
+--- a/renderdoc/driver/d3d12/d3d12_device.cpp
++++ b/renderdoc/driver/d3d12/d3d12_device.cpp
+@@ -5333,7 +5333,7 @@
+     if(IsReplayMode(m_State))
+     {
+       D3D12MarkerRegion::Begin(initStateCurList,
+-                               "!!!!RenderDoc Internal: ApplyInitialContents batched list");
++                               "!!!!RenderTest Internal: ApplyInitialContents batched list");
+     }
+   }
+ 
+@@ -6064,7 +6064,7 @@
+   if(!partial)
+   {
+     {
+-      D3D12MarkerRegion apply(GetQueue(), "!!!!RenderDoc Internal: ApplyInitialContents");
++      D3D12MarkerRegion apply(GetQueue(), "!!!!RenderTest Internal: ApplyInitialContents");
+       ApplyInitialContents();
+     }
+ 
+@@ -6090,7 +6090,7 @@
+   m_State = CaptureState::ActiveReplaying;
+ 
+   D3D12MarkerRegion::Set(
+-      GetQueue(), StringFormat::Fmt("!!!!RenderDoc Internal: RenderDoc Replay %d (%d): %u->%u",
++      GetQueue(), StringFormat::Fmt("!!!!RenderTest Internal: RenderTest Replay %d (%d): %u->%u",
+                                     (int)replayType, (int)partial, startEventID, endEventID));
+ 
+   if(!partial)
+@@ -6193,7 +6193,7 @@
+     }
+   }
+ 
+-  D3D12MarkerRegion::Set(GetQueue(), "!!!!RenderDoc Internal: Done replay");
++  D3D12MarkerRegion::Set(GetQueue(), "!!!!RenderTest Internal: Done replay");
+ 
+   // ensure all UAV writes have finished before subsequent work
+   ID3D12GraphicsCommandList *list = GetNewList();
+--- a/renderdoc/driver/d3d12/d3d12_device_wrap.cpp
++++ b/renderdoc/driver/d3d12/d3d12_device_wrap.cpp
+@@ -1087,7 +1087,7 @@
+       else
+       {
+         RDCERR(
+-            "RenderDoc needs extra descriptors for patching during analysis,"
++            "RenderTest needs extra descriptors for patching during analysis,"
+             "but heap is already at binding tier limit");
+       }
+     }
+@@ -1098,7 +1098,7 @@
+     if(patched && FAILED(hr))
+     {
+       RDCWARN(
+-          "RenderDoc needs extra descriptors for patching during analysis,"
++          "RenderTest needs extra descriptors for patching during analysis,"
+           "but heap failed to expand any further even at tier 3");
+       PatchedDesc.NumDescriptors = Descriptor.NumDescriptors;
+ 
+--- a/renderdoc/driver/d3d12/d3d12_manager.cpp
++++ b/renderdoc/driver/d3d12/d3d12_manager.cpp
+@@ -850,7 +850,7 @@
+ 
+   UINT internalExecsRequired = 0;
+ 
+-  // this loop emulates/verifies RENDERDOC_PrepareRayIndirectExecuteCS
++  // this loop emulates/verifies RENDERTEST_PrepareRayIndirectExecuteCS
+   for(UINT cmd = 0; cmd < cmdCount; cmd++)
+   {
+     D3D12_DISPATCH_RAYS_DESC *wrappedDisp =
+@@ -2836,7 +2836,7 @@
+     // PipelineState
+     ID3DBlob *shader = NULL;
+     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PatchShaderTableCS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PatchShaderTableCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+     if(shader)
+@@ -2855,7 +2855,7 @@
+         RDCERR("Unable to create pipeline for dispatch patching");
+ 
+       if(m_RayPatchingData.shaderTablePatchPipe)
+-        m_RayPatchingData.shaderTablePatchPipe->SetName(L"RENDERDOC_PatchShaderTableCS");
++        m_RayPatchingData.shaderTablePatchPipe->SetName(L"RENDERTEST_PatchShaderTableCS");
+     }
+     else
+     {
+@@ -2864,7 +2864,7 @@
+ 
+     SAFE_RELEASE(shader);
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_CopyShaderTableCS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_CopyShaderTableCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+     if(shader)
+@@ -2883,7 +2883,7 @@
+         RDCERR("Unable to create pipeline for dispatch patching");
+ 
+       if(m_RayPatchingData.shaderTableCopyPipe)
+-        m_RayPatchingData.shaderTableCopyPipe->SetName(L"RENDERDOC_CopyShaderTableCS");
++        m_RayPatchingData.shaderTableCopyPipe->SetName(L"RENDERTEST_CopyShaderTableCS");
+     }
+     else
+     {
+@@ -2980,7 +2980,7 @@
+     // PipelineState
+     ID3DBlob *shader = NULL;
+     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrepareRayIndirectExecuteCS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PrepareRayIndirectExecuteCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+     if(shader)
+@@ -2996,7 +2996,7 @@
+           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_RayPatchingData.indirectPrepPipe);
+ 
+       if(m_RayPatchingData.indirectPrepPipe)
+-        m_RayPatchingData.indirectPrepPipe->SetName(L"RENDERDOC_PrepareRayIndirectExecuteCS");
++        m_RayPatchingData.indirectPrepPipe->SetName(L"RENDERTEST_PrepareRayIndirectExecuteCS");
+ 
+       if(!SUCCEEDED(result))
+         RDCERR("Unable to create pipeline for indirect execute patching");
+@@ -3121,7 +3121,7 @@
+     // PipelineState
+     ID3DBlob *shader = NULL;
+     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrepareTLASCopyIndirectExecuteCS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PrepareTLASCopyIndirectExecuteCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+     if(shader)
+@@ -3137,7 +3137,7 @@
+           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_TLASCopyingData.PreparePipe);
+ 
+       if(m_TLASCopyingData.PreparePipe)
+-        m_TLASCopyingData.PreparePipe->SetName(L"RENDERDOC_PrepareTLASCopyIndirectExecuteCS");
++        m_TLASCopyingData.PreparePipe->SetName(L"RENDERTEST_PrepareTLASCopyIndirectExecuteCS");
+ 
+       if(!SUCCEEDED(result))
+         RDCERR("Unable to create pipeline for TLAS instance copying");
+@@ -3149,7 +3149,7 @@
+ 
+     SAFE_RELEASE(shader);
+ 
+-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_CopyBLASInstanceCS",
++    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_CopyBLASInstanceCS",
+                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+     if(shader)
+@@ -3165,7 +3165,7 @@
+           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_TLASCopyingData.CopyPipe);
+ 
+       if(m_TLASCopyingData.CopyPipe)
+-        m_TLASCopyingData.CopyPipe->SetName(L"RENDERDOC_CopyBLASInstanceCS");
++        m_TLASCopyingData.CopyPipe->SetName(L"RENDERTEST_CopyBLASInstanceCS");
+ 
+       if(!SUCCEEDED(result))
+         RDCERR("Unable to create pipeline for TLAS instance copying");
+@@ -3258,7 +3258,7 @@
+       // PipelineState
+       ID3DBlob *shader = NULL;
+       rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
+-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PatchAccStructAddressCS",
++      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_PatchAccStructAddressCS",
+                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
+ 
+       if(shader)
+@@ -3274,7 +3274,7 @@
+             &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_accStructPatchInfo.m_pipeline);
+ 
+         if(m_accStructPatchInfo.m_pipeline)
+-          m_accStructPatchInfo.m_pipeline->SetName(L"RENDERDOC_PatchAccStructAddressCS");
++          m_accStructPatchInfo.m_pipeline->SetName(L"RENDERTEST_PatchAccStructAddressCS");
+ 
+         if(!SUCCEEDED(result))
+           RDCERR("Unable to create pipeline for patching the BLAS");
+--- a/renderdoc/driver/d3d12/d3d12_overlay.cpp
++++ b/renderdoc/driver/d3d12/d3d12_overlay.cpp
+@@ -358,13 +358,13 @@
+ 
+     if(dxil)
+     {
+-      m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_QuadOverdrawPS",
++      m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_QuadOverdrawPS",
+                                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_6_0",
+                                                  &quadWriteBlob);
+     }
+     else
+     {
+-      m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERDOC_QuadOverdrawPS",
++      m_pDevice->GetShaderCache()->GetShaderBlob(hlsl.c_str(), "RENDERTEST_QuadOverdrawPS",
+                                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "ps_5_1",
+                                                  &quadWriteBlob);
+     }
+--- a/renderdoc/driver/d3d12/d3d12_rendertext.cpp
++++ b/renderdoc/driver/d3d12/d3d12_rendertext.cpp
+@@ -383,9 +383,9 @@
+   ID3DBlob *TextVS = NULL;
+   ID3DBlob *TextPS = NULL;
+ 
+-  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TextVS", D3DCOMPILE_WARNINGS_ARE_ERRORS, {},
++  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TextVS", D3DCOMPILE_WARNINGS_ARE_ERRORS, {},
+                              "vs_5_0", &TextVS);
+-  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_TextPS", D3DCOMPILE_WARNINGS_ARE_ERRORS, {},
++  shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERTEST_TextPS", D3DCOMPILE_WARNINGS_ARE_ERRORS, {},
+                              "ps_5_0", &TextPS);
+ 
+   RDCASSERT(TextVS);
+--- a/renderdoc/driver/d3d12/d3d12_replay.cpp
++++ b/renderdoc/driver/d3d12/d3d12_replay.cpp
+@@ -4570,7 +4570,7 @@
+       {
+         RDCWARN(
+             "Loaded d3d12.dll from 12on7 subfolder."
+-            "Please use RenderDoc's plugins/d3d12/ subfolder instead");
++            "Please use RenderTest's plugins/d3d12/ subfolder instead");
+       }
+       else
+       {
+@@ -4626,7 +4626,7 @@
+     {
+       RETURN_ERROR_RESULT(ResultCode::APIIncompatibleVersion,
+                           "D3D12 capture is incompatible version %llu, newest supported by this "
+-                          "build of RenderDoc is %llu",
++                          "build of RenderTest is %llu",
+                           ver, D3D12InitParams::CurrentVersion);
+     }
+ 
+--- a/renderdoc/driver/d3d12/d3d12_sdk_select.cpp
++++ b/renderdoc/driver/d3d12/d3d12_sdk_select.cpp
+@@ -422,7 +422,7 @@
+     // we try a few different  variants
+     for(uint32_t i = 0; i < 32; i++)
+     {
+-      rdcstr filename = StringFormat::Fmt("%s/RenderDoc/D3D12Core/%u.ver%u/D3D12Core.dll",
++      rdcstr filename = StringFormat::Fmt("%s/RenderTest/D3D12Core/%u.ver%u/D3D12Core.dll",
+                                           FileIO::GetTempFolderFilename().c_str(), i, SDKVersion);
+ 
+       FileIO::CreateParentDirectory(filename);
+--- a/renderdoc/driver/d3d12/d3d12_shader_cache.cpp
++++ b/renderdoc/driver/d3d12/d3d12_shader_cache.cpp
+@@ -443,7 +443,7 @@
+     if(dxc == NULL)
+     {
+       return "Couldn't locate dxcompiler.dll. Ensure you have a Windows 10 SDK installed or place "
+-             "dxcompiler.dll in RenderDoc's plugins/d3d12 folder.";
++             "dxcompiler.dll in RenderTest's plugins/d3d12 folder.";
+     }
+     else
+     {
+--- a/renderdoc/driver/dxgi/dxgi_hooks.cpp
++++ b/renderdoc/driver/dxgi/dxgi_hooks.cpp
+@@ -423,7 +423,7 @@
+     if(riid == __uuidof(IDXGIInfoQueue))
+     {
+       RDCWARN(
+-          "Returning a dummy IDXGIInfoQueue that does nothing. RenderDoc takes control of the "
++          "Returning a dummy IDXGIInfoQueue that does nothing. RenderTest takes control of the "
+           "debug layer.");
+       dxgihooks.m_DummyInfoQueue.AddRef();
+       if(ppDebug)
+@@ -454,7 +454,7 @@
+     if(riid == __uuidof(IDXGIInfoQueue))
+     {
+       RDCWARN(
+-          "Returning a dummy IDXGIInfoQueue that does nothing. RenderDoc takes control of the "
++          "Returning a dummy IDXGIInfoQueue that does nothing. RenderTest takes control of the "
+           "debug layer.");
+       dxgihooks.m_DummyInfoQueue.AddRef();
+       if(ppDebug)
+--- a/renderdoc/driver/gl/egl_hooks.cpp
++++ b/renderdoc/driver/gl/egl_hooks.cpp
+@@ -1045,7 +1045,7 @@
+   if(toggle.size() >= 1 && toggle[0] == '0')
+   {
+     RDCLOG(
+-        "EGL hooks disabled by RENDERDOC_HOOK_EGL environment variable - "
++        "EGL hooks disabled by RENDERTEST_HOOK_EGL environment variable - "
+         "if GLES emulator is in use, underlying API will be captured");
+     return false;
+   }
+--- a/renderdoc/driver/gl/gl_common.cpp
++++ b/renderdoc/driver/gl/gl_common.cpp
+@@ -120,7 +120,7 @@
+   {                                                                                    \
+     SET_ERROR_RESULT(                                                                  \
+         result, ResultCode::APIHardwareUnsupported,                                    \
+-        "Missing function %s, required for replay. RenderDoc requires a 3.2 context, " \
++        "Missing function %s, required for replay. RenderTest requires a 3.2 context, " \
+         "and a handful of extensions, see the Documentation.",                         \
+         STRINGIZE(func));                                                              \
+   }
+--- a/renderdoc/driver/gl/gl_driver.cpp
++++ b/renderdoc/driver/gl/gl_driver.cpp
+@@ -2065,7 +2065,7 @@
+     if(m_NoCtxFrames == 100)
+     {
+       RDCERR(
+-          "Seen 100 frames with no context current. RenderDoc requires a context to be current "
++          "Seen 100 frames with no context current. RenderTest requires a context to be current "
+           "during the call to SwapBuffers to display its overlay and start/stop captures on "
+           "default keys.\nIf your GL use is elsewhere, consider using the in-application API to "
+           "trigger captures manually");
+@@ -5914,7 +5914,7 @@
+   if(!partial)
+   {
+     RENDERDOC_PROFILEREGION("ApplyInitialContents");
+-    GLMarkerRegion apply("!!!!RenderDoc Internal: ApplyInitialContents");
++    GLMarkerRegion apply("!!!!RenderTest Internal: ApplyInitialContents");
+     GetResourceManager()->ApplyInitialContents();
+ 
+     m_WasActiveFeedback = false;
+@@ -5922,7 +5922,7 @@
+ 
+   m_State = CaptureState::ActiveReplaying;
+ 
+-  GLMarkerRegion::Set(StringFormat::Fmt("!!!!RenderDoc Internal:  Replay %d (%d): %u->%u",
++  GLMarkerRegion::Set(StringFormat::Fmt("!!!!RenderTest Internal:  Replay %d (%d): %u->%u",
+                                         (int)replayType, (int)partial, startEventID, endEventID));
+ 
+   m_ReplayEventCount = 0;
+@@ -5944,5 +5944,5 @@
+   for(int i = 0; m_ReplayMarkers && i < m_ReplayEventCount; i++)
+     GLMarkerRegion::End();
+ 
+-  GLMarkerRegion::Set("!!!!RenderDoc Internal: Done replay");
+-}
++  GLMarkerRegion::Set("!!!!RenderTest Internal: Done replay");
++}
+--- a/renderdoc/driver/gl/gl_overlay.cpp
++++ b/renderdoc/driver/gl/gl_overlay.cpp
+@@ -515,7 +515,7 @@
+     overlayFixedColLocation = 99;
+   else
+     overlayFixedColLocation =
+-        drv.glGetUniformLocation(DebugData.overlayProg, "RENDERDOC_Fixed_Color");
++        drv.glGetUniformLocation(DebugData.overlayProg, "RENDERTEST_Fixed_Color");
+ 
+   WrappedOpenGL::TextureData &texDetails = m_pDriver->m_Textures[texid];
+ 
+@@ -1401,7 +1401,7 @@
+       GLint fixedColLocation = 99;
+       if(!spirvOverlay)
+         fixedColLocation =
+-            drv.glGetUniformLocation(DebugData.fullScreenFixedColProg, "RENDERDOC_Fixed_Color");
++            drv.glGetUniformLocation(DebugData.fullScreenFixedColProg, "RENDERTEST_Fixed_Color");
+       drv.glProgramUniform4fv(DebugData.fullScreenFixedColProg, fixedColLocation, 1, green);
+ 
+       drv.glDisable(eGL_BLEND);
+--- a/renderdoc/driver/gl/gl_replay.cpp
++++ b/renderdoc/driver/gl/gl_replay.cpp
+@@ -44,7 +44,7 @@
+ RDOC_CONFIG(bool, OpenGL_HardwareCounters, true,
+             "Enable support for IHV-specific hardware counters on OpenGL.");
+ 
+-static const char *SPIRVDisassemblyTarget = "SPIR-V (RenderDoc)";
++static const char *SPIRVDisassemblyTarget = "SPIR-V (RenderTest)";
+ 
+ GLReplay::GLReplay(WrappedOpenGL *d)
+ {
+--- a/renderdoc/driver/gl/glx_platform.cpp
++++ b/renderdoc/driver/gl/glx_platform.cpp
+@@ -429,7 +429,7 @@
+       XFree(fbcfg);
+       RETURN_ERROR_RESULT(
+           ResultCode::APIHardwareUnsupported,
+-          "Couldn't create 3.2 context - RenderDoc requires OpenGL 3.2 availability");
++          "Couldn't create 3.2 context - RenderTest requires OpenGL 3.2 availability");
+     }
+ 
+     GLCoreVersion = major * 10 + minor;
+--- a/renderdoc/driver/gl/wgl_platform.cpp
++++ b/renderdoc/driver/gl/wgl_platform.cpp
+@@ -398,7 +398,7 @@
+       ReleaseDC(w, dc);
+       DestroyWindow(w);
+       RETURN_ERROR_RESULT(ResultCode::APIHardwareUnsupported,
+-                          "RenderDoc requires WGL_ARB_create_context and WGL_ARB_pixel_format");
++                          "RenderTest requires WGL_ARB_create_context and WGL_ARB_pixel_format");
+     }
+ 
+     WGL.wglMakeCurrent(NULL, NULL);
+@@ -418,7 +418,7 @@
+     pfd.cDepthBits = 0;
+     pfd.cStencilBits = 0;
+ 
+-    w = CreateWindowEx(WS_EX_CLIENTEDGE, WINDOW_CLASS_NAME, L"RenderDoc replay window",
++    w = CreateWindowEx(WS_EX_CLIENTEDGE, WINDOW_CLASS_NAME, L"RenderTest replay window",
+                        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 32, 32, NULL, NULL,
+                        GetModuleHandle(NULL), NULL);
+ 
+@@ -475,7 +475,7 @@
+       DestroyWindow(w);
+       RETURN_ERROR_RESULT(
+           ResultCode::APIHardwareUnsupported,
+-          "Couldn't create at least 3.2 context - RenderDoc requires OpenGL 3.2 availability");
++          "Couldn't create at least 3.2 context - RenderTest requires OpenGL 3.2 availability");
+     }
+ 
+     GLCoreVersion = major * 10 + minor;
+--- a/renderdoc/driver/gl/wrappers/gl_get_funcs.cpp
++++ b/renderdoc/driver/gl/wrappers/gl_get_funcs.cpp
+@@ -810,7 +810,7 @@
+   }
+   else if(name == eGL_DEBUG_TOOL_NAME_EXT)
+   {
+-    return (const GLubyte *)"RenderDoc";
++    return (const GLubyte *)"RenderTest";
+   }
+   return GL.glGetString(name);
+ }
+@@ -826,7 +826,7 @@
+   }
+   else if(name == eGL_DEBUG_TOOL_NAME_EXT)
+   {
+-    return (const GLubyte *)"RenderDoc";
++    return (const GLubyte *)"RenderTest";
+   }
+   return GL.glGetStringi(name, i);
+ }
+--- a/renderdoc/driver/ihv/amd/ags_wrapper.cpp
++++ b/renderdoc/driver/ihv/amd/ags_wrapper.cpp
+@@ -99,8 +99,8 @@
+     AGSDX11ReturnedParams returnedParams;
+ 
+     extensionParams.numBreadcrumbMarkers = 0;
+-    extensionParams.pAppName = L"RenderDoc";
+-    extensionParams.pEngineName = L"RenderDoc";
++    extensionParams.pAppName = L"RenderTest";
++    extensionParams.pEngineName = L"RenderTest";
+     extensionParams.appVersion = RENDERDOC_VERSION_MAJOR << 8 | RENDERDOC_VERSION_MINOR;
+     extensionParams.engineVersion = RENDERDOC_VERSION_MAJOR << 8 | RENDERDOC_VERSION_MINOR;
+     extensionParams.crossfireMode = AGS_CROSSFIRE_MODE_DISABLE;
+@@ -151,8 +151,8 @@
+     AGSDX12ExtensionParams extensionParams;
+     AGSDX12ReturnedParams returnedParams;
+ 
+-    extensionParams.pAppName = L"RenderDoc";
+-    extensionParams.pEngineName = L"RenderDoc";
++    extensionParams.pAppName = L"RenderTest";
++    extensionParams.pEngineName = L"RenderTest";
+     extensionParams.appVersion = RENDERDOC_VERSION_MAJOR << 8 | RENDERDOC_VERSION_MINOR;
+     extensionParams.engineVersion = RENDERDOC_VERSION_MAJOR << 8 | RENDERDOC_VERSION_MINOR;
+     extensionParams.uavSlot = reg;
+--- a/renderdoc/driver/ihv/amd/amd_rgp.cpp
++++ b/renderdoc/driver/ihv/amd/amd_rgp.cpp
+@@ -46,12 +46,12 @@
+ 
+ const char *AMDRGPControl::GetBeginMarker()
+ {
+-  return "BeginRenderDocRGPCapture======";
++  return "BeginRenderTestRGPCapture======";
+ }
+ 
+ const char *AMDRGPControl::GetEndMarker()
+ {
+-  return "EndRenderDocRGPCapture======";
++  return "EndRenderTestRGPCapture======";
+ }
+ 
+ uint64_t AMDRGPControl::GetBeginTag()
+--- a/renderdoc/driver/ihv/nv/nv_aftermath.cpp
++++ b/renderdoc/driver/ihv/nv/nv_aftermath.cpp
+@@ -146,7 +146,7 @@
+ void DescriptionCB(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription, void *pUserData)
+ {
+   addDescription(GFSDK_Aftermath_GpuCrashDumpDescriptionKey_ApplicationName,
+-                 "RenderDoc Aftermath Integration");
++                 "RenderTest Aftermath Integration");
+   addDescription(GFSDK_Aftermath_GpuCrashDumpDescriptionKey_ApplicationVersion,
+                  "v" MAJOR_MINOR_VERSION_STRING);
+ }
+--- a/renderdoc/driver/ihv/nv/nvapi_hooks.cpp
++++ b/renderdoc/driver/ihv/nv/nvapi_hooks.cpp
+@@ -221,7 +221,7 @@
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -252,13 +252,13 @@
+       }
+       else
+       {
+-        RDCERR("Couldn't retrieve ID3D12Device from RenderDoc-wrapped device");
++        RDCERR("Couldn't retrieve ID3D12Device from RenderTest-wrapped device");
+         return NVAPI_INVALID_POINTER;
+       }
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -280,7 +280,7 @@
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -303,7 +303,7 @@
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -327,7 +327,7 @@
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -350,7 +350,7 @@
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -428,13 +428,13 @@
+       }
+       else
+       {
+-        RDCERR("Couldn't retrieve ID3D12Device from RenderDoc-wrapped device");
++        RDCERR("Couldn't retrieve ID3D12Device from RenderTest-wrapped device");
+         return NVAPI_INVALID_POINTER;
+       }
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+@@ -512,13 +512,13 @@
+       }
+       else
+       {
+-        RDCERR("Couldn't retrieve ID3D12Device from RenderDoc-wrapped device");
++        RDCERR("Couldn't retrieve ID3D12Device from RenderTest-wrapped device");
+         return NVAPI_INVALID_POINTER;
+       }
+     }
+     else
+     {
+-      RDCERR("Didn't pass RenderDoc-wrapped device to nvapi function");
++      RDCERR("Didn't pass RenderTest-wrapped device to nvapi function");
+       return NVAPI_INVALID_POINTER;
+     }
+   }
+--- a/renderdoc/driver/vulkan/vk_core.cpp
++++ b/renderdoc/driver/vulkan/vk_core.cpp
+@@ -310,12 +310,12 @@
+ 
+     if(IsReplayMode(m_State))
+     {
+-      VkMarkerRegion::Begin("!!!!RenderDoc Internal: ApplyInitialContents batched list",
++      VkMarkerRegion::Begin("!!!!RenderTest Internal: ApplyInitialContents batched list",
+                             initStateCurCmd);
+     }
+     else
+     {
+-      VkMarkerRegion::Begin("!!!!RenderDoc Internal: PrepareInitialContents batched list",
++      VkMarkerRegion::Begin("!!!!RenderTest Internal: PrepareInitialContents batched list",
+                             initStateCurCmd);
+     }
+   }
+@@ -5274,14 +5274,14 @@
+ 
+   if(!partial)
+   {
+-    VkMarkerRegion::Begin("!!!!RenderDoc Internal: ApplyInitialContents");
++    VkMarkerRegion::Begin("!!!!RenderTest Internal: ApplyInitialContents");
+     ApplyInitialContents();
+     VkMarkerRegion::End();
+   }
+ 
+   m_State = CaptureState::ActiveReplaying;
+ 
+-  VkMarkerRegion::Set(StringFormat::Fmt("!!!!RenderDoc Internal: RenderDoc Replay %d (%d): %u->%u",
++  VkMarkerRegion::Set(StringFormat::Fmt("!!!!RenderTest Internal: RenderTest Replay %d (%d): %u->%u",
+                                         (int)replayType, (int)partial, startEventID, endEventID));
+ 
+   {
+@@ -5464,7 +5464,7 @@
+     });
+   }
+ 
+-  VkMarkerRegion::Set("!!!!RenderDoc Internal: Done replay");
++  VkMarkerRegion::Set("!!!!RenderTest Internal: Done replay");
+ }
+ 
+ template <typename SerialiserType>
+@@ -5646,7 +5646,7 @@
+   {
+     return StringFormat::Fmt(
+         "This was invalid at capture time.\n"
+-        "You must use API validation, as RenderDoc does not handle invalid API use like this.\n\n"
++        "You must use API validation, as RenderTest does not handle invalid API use like this.\n\n"
+         "Captured on device: %s %s, %u.%u.%u",
+         ToStr(capture.Vendor()).c_str(), m_OrigPhysicalDeviceData.props.deviceName, capture.Major(),
+         capture.Minor(), capture.Patch());
+--- a/renderdoc/driver/vulkan/vk_initstate.cpp
++++ b/renderdoc/driver/vulkan/vk_initstate.cpp
+@@ -1399,7 +1399,7 @@
+     {
+       RDCWARN(
+           "Skipping sparse initial states of buffer from old capture. "
+-          "Please re-capture with this version of RenderDoc.");
++          "Please re-capture with this version of RenderTest.");
+ 
+       // serialise without allocating, this makes for a skip
+       VkSparseMemoryBind *binds = NULL;
+@@ -1474,7 +1474,7 @@
+         {
+           RDCWARN(
+               "Skipping sparse initial states of buffer from old capture. "
+-              "Please re-capture with this version of RenderDoc.");
++              "Please re-capture with this version of RenderTest.");
+ 
+           // serialise without allocating, this makes for a skip
+           VkSparseMemoryBind *opaque = NULL;
+--- a/renderdoc/driver/vulkan/vk_layer.cpp
++++ b/renderdoc/driver/vulkan/vk_layer.cpp
+@@ -77,8 +77,8 @@
+     PFN_vkCreateInstance create = (PFN_vkCreateInstance)dlsym(module, "vkCreateInstance");
+     VkApplicationInfo app = {
+         VK_STRUCTURE_TYPE_APPLICATION_INFO, NULL,
+-        "RenderDoc forced instance",        VK_MAKE_VERSION(1, 0, 0),
+-        "RenderDoc forced instance",        VK_MAKE_VERSION(1, 0, 0),
++        "RenderTest forced instance",        VK_MAKE_VERSION(1, 0, 0),
++        "RenderTest forced instance",        VK_MAKE_VERSION(1, 0, 0),
+         VK_MAKE_VERSION(1, 0, 0),
+     };
+     VkInstanceCreateInfo info = {
+@@ -112,7 +112,7 @@
+     // we don't register any library or function hooks because we use the layer system
+ 
+     // support self-hosted capture by checking our filename and tweaking the env var we set
+-    if(VulkanLayerJSONBasename != "renderdoc")
++    if(VulkanLayerJSONBasename != "rendertest")
+     {
+       Process::RegisterEnvironmentModification(EnvironmentModification(
+           EnvMod::Set, EnvSep::NoSep,
+@@ -310,24 +310,24 @@
+ 
+ #pragma comment( \
+     linker,      \
+-    "/EXPORT:VK_LAYER_RENDERDOC_CaptureEnumerateDeviceLayerProperties=_VK_LAYER_RENDERDOC_CaptureEnumerateDeviceLayerProperties@12")
++    "/EXPORT:VK_LAYER_RENDERTEST_CaptureEnumerateDeviceLayerProperties=_VK_LAYER_RENDERTEST_CaptureEnumerateDeviceLayerProperties@12")
+ #pragma comment( \
+     linker,      \
+-    "/EXPORT:VK_LAYER_RENDERDOC_CaptureEnumerateDeviceExtensionProperties=_VK_LAYER_RENDERDOC_CaptureEnumerateDeviceExtensionProperties@16")
++    "/EXPORT:VK_LAYER_RENDERTEST_CaptureEnumerateDeviceExtensionProperties=_VK_LAYER_RENDERTEST_CaptureEnumerateDeviceExtensionProperties@16")
+ #pragma comment( \
+     linker,      \
+-    "/EXPORT:VK_LAYER_RENDERDOC_CaptureEnumerateInstanceExtensionProperties=_VK_LAYER_RENDERDOC_CaptureEnumerateInstanceExtensionProperties@16")
++    "/EXPORT:VK_LAYER_RENDERTEST_CaptureEnumerateInstanceExtensionProperties=_VK_LAYER_RENDERTEST_CaptureEnumerateInstanceExtensionProperties@16")
+ #pragma comment( \
+     linker,      \
+-    "/EXPORT:VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr=_VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr@8")
++    "/EXPORT:VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr=_VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr@8")
+ #pragma comment( \
+     linker,      \
+-    "/EXPORT:VK_LAYER_RENDERDOC_CaptureGetInstanceProcAddr=_VK_LAYER_RENDERDOC_CaptureGetInstanceProcAddr@8")
++    "/EXPORT:VK_LAYER_RENDERTEST_CaptureGetInstanceProcAddr=_VK_LAYER_RENDERTEST_CaptureGetInstanceProcAddr@8")
+ #endif
+ 
+ extern "C" {
+ 
+-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL VK_LAYER_RENDERDOC_CaptureEnumerateDeviceLayerProperties(
++VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL VK_LAYER_RENDERTEST_CaptureEnumerateDeviceLayerProperties(
+     VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount, VkLayerProperties *pProperties)
+ {
+   // must have a property count, either to fill out or use as a size
+@@ -350,7 +350,7 @@
+         RENDERDOC_VULKAN_LAYER_NAME,
+         VK_API_VERSION_1_0,
+         VK_MAKE_VERSION(RENDERDOC_VERSION_MAJOR, RENDERDOC_VERSION_MINOR, 0),
+-        "Debugging capture layer for RenderDoc",
++        "Debugging capture layer for RenderTest",
+     };
+ 
+     // set the one layer property
+@@ -361,7 +361,7 @@
+ }
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+-VK_LAYER_RENDERDOC_CaptureEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
++VK_LAYER_RENDERTEST_CaptureEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
+                                                              const char *pLayerName,
+                                                              uint32_t *pPropertyCount,
+                                                              VkExtensionProperties *pProperties)
+@@ -377,7 +377,7 @@
+ }
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+-VK_LAYER_RENDERDOC_CaptureEnumerateInstanceExtensionProperties(
++VK_LAYER_RENDERTEST_CaptureEnumerateInstanceExtensionProperties(
+     const VkEnumerateInstanceExtensionPropertiesChain *pChain, const char *pLayerName,
+     uint32_t *pPropertyCount, VkExtensionProperties *pProperties)
+ {
+@@ -428,10 +428,10 @@
+ // proc addr routines
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+-VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr(VkDevice device, const char *pName)
++VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr(VkDevice device, const char *pName)
+ {
+   if(!strcmp("vkGetDeviceProcAddr", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr;
+   if(!strcmp("vkCreateDevice", pName))
+     return (PFN_vkVoidFunction)&hooked_vkCreateDevice;
+   if(!strcmp("vkDestroyDevice", pName))
+@@ -462,10 +462,10 @@
+ }
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+-VK_LAYER_RENDERDOC_Capture_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *pName);
++VK_LAYER_RENDERTEST_Capture_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *pName);
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+-VK_LAYER_RENDERDOC_CaptureGetInstanceProcAddr(VkInstance instance, const char *pName)
++VK_LAYER_RENDERTEST_CaptureGetInstanceProcAddr(VkInstance instance, const char *pName)
+ {
+   // if name is NULL undefined is returned, let's return NULL
+   if(pName == NULL)
+@@ -474,11 +474,11 @@
+   // a NULL instance can return vkGetInstanceProcAddr or a global function, handle that here
+ 
+   if(!strcmp("vkGetInstanceProcAddr", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureGetInstanceProcAddr;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureGetInstanceProcAddr;
+   if(!strcmp("vkEnumerateInstanceExtensionProperties", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureEnumerateInstanceExtensionProperties;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureEnumerateInstanceExtensionProperties;
+   if(!strcmp("vk_layerGetPhysicalDeviceProcAddr", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_Capture_layerGetPhysicalDeviceProcAddr;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_Capture_layerGetPhysicalDeviceProcAddr;
+ 
+   // don't implement vkEnumerateInstanceLayerProperties or vkEnumerateInstanceVersion, the loader
+   // will do that
+@@ -489,11 +489,11 @@
+     return NULL;
+ 
+   if(!strcmp("vkEnumerateDeviceLayerProperties", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureEnumerateDeviceLayerProperties;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureEnumerateDeviceLayerProperties;
+   if(!strcmp("vkEnumerateDeviceExtensionProperties", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureEnumerateDeviceExtensionProperties;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureEnumerateDeviceExtensionProperties;
+   if(!strcmp("vkGetDeviceProcAddr", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr;
+   if(!strcmp("vkCreateDevice", pName))
+     return (PFN_vkVoidFunction)&hooked_vkCreateDevice;
+   if(!strcmp("vkDestroyDevice", pName))
+@@ -553,18 +553,18 @@
+ }
+ 
+ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+-VK_LAYER_RENDERDOC_Capture_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *pName)
++VK_LAYER_RENDERTEST_Capture_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *pName)
+ {
+   // GetPhysicalDeviceProcAddr acts like GetInstanceProcAddr but it returns NULL for any functions
+   // which are known but aren't physical device functions
+   if(!strcmp("vkGetInstanceProcAddr", pName))
+     return NULL;
+   if(!strcmp("vk_layerGetPhysicalDeviceProcAddr", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_Capture_layerGetPhysicalDeviceProcAddr;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_Capture_layerGetPhysicalDeviceProcAddr;
+   if(!strcmp("vkEnumerateDeviceLayerProperties", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureEnumerateDeviceLayerProperties;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureEnumerateDeviceLayerProperties;
+   if(!strcmp("vkEnumerateDeviceExtensionProperties", pName))
+-    return (PFN_vkVoidFunction)&VK_LAYER_RENDERDOC_CaptureEnumerateDeviceExtensionProperties;
++    return (PFN_vkVoidFunction)&VK_LAYER_RENDERTEST_CaptureEnumerateDeviceExtensionProperties;
+   if(!strcmp("vkEnumerateInstanceExtensionProperties", pName))
+     return NULL;
+   if(!strcmp("vkGetDeviceProcAddr", pName))
+@@ -645,17 +645,17 @@
+ 
+ // layer interface negotation (new interface)
+ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+-VK_LAYER_RENDERDOC_CaptureNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct)
++VK_LAYER_RENDERTEST_CaptureNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct)
+ {
+   if(pVersionStruct->sType != LAYER_NEGOTIATE_INTERFACE_STRUCT)
+     return VK_ERROR_INITIALIZATION_FAILED;
+ 
+   if(pVersionStruct->loaderLayerInterfaceVersion >= 2)
+   {
+-    pVersionStruct->pfnGetInstanceProcAddr = VK_LAYER_RENDERDOC_CaptureGetInstanceProcAddr;
+-    pVersionStruct->pfnGetDeviceProcAddr = VK_LAYER_RENDERDOC_CaptureGetDeviceProcAddr;
++    pVersionStruct->pfnGetInstanceProcAddr = VK_LAYER_RENDERTEST_CaptureGetInstanceProcAddr;
++    pVersionStruct->pfnGetDeviceProcAddr = VK_LAYER_RENDERTEST_CaptureGetDeviceProcAddr;
+     pVersionStruct->pfnGetPhysicalDeviceProcAddr =
+-        VK_LAYER_RENDERDOC_Capture_layerGetPhysicalDeviceProcAddr;
++        VK_LAYER_RENDERTEST_Capture_layerGetPhysicalDeviceProcAddr;
+   }
+ 
+   // we only support the current version. Don't let updating the header silently make us report a
+--- a/renderdoc/driver/vulkan/vk_posix.cpp
++++ b/renderdoc/driver/vulkan/vk_posix.cpp
+@@ -247,7 +247,7 @@
+ 
+   json = json.substr(0, idx) + sopath + json.substr(idx + sizeof(modulePathString) - 1);
+ 
+-  const char majorString[] = "@RENDERDOC_VERSION_MAJOR@";
++  const char majorString[] = "@RENDERTEST_VERSION_MAJOR@";
+ 
+   idx = json.find(majorString);
+   while(idx >= 0)
+@@ -258,7 +258,7 @@
+     idx = json.find(majorString);
+   }
+ 
+-  const char minorString[] = "@RENDERDOC_VERSION_MINOR@";
++  const char minorString[] = "@RENDERTEST_VERSION_MINOR@";
+ 
+   idx = json.find(minorString);
+   while(idx >= 0)
+@@ -316,7 +316,7 @@
+   rdcstr ret = "";
+ 
+   // The line is:
+-  // "library_path": "/foo/bar/librenderdoc.so",
++  // "library_path": "/foo/bar/librendertest.so",
+   char *c = strstr(json_string, "library_path");
+ 
+   if(c)
+--- a/renderdoc/driver/vulkan/vk_postvs.cpp
++++ b/renderdoc/driver/vulkan/vk_postvs.cpp
+@@ -895,7 +895,7 @@
+   rdcspv::Id wrapperEntry = editor.MakeId();
+   // don't set a debug name, as some drivers get confused when this doesn't match the entry point
+   // name :(.
+-  // editor.SetName(wrapperEntry, "RenderDoc_MeshFetch_Wrapper_Entrypoint");
++  // editor.SetName(wrapperEntry, "RenderTest_MeshFetch_Wrapper_Entrypoint");
+ 
+   // if we're not using all globals, this is only Input variables so only our invocation Id and any
+   // builtins we kept
+--- a/renderdoc/driver/vulkan/vk_replay.cpp
++++ b/renderdoc/driver/vulkan/vk_replay.cpp
+@@ -46,7 +46,7 @@
+ 
+ RDOC_EXTERN_CONFIG(bool, Vulkan_Debug_SingleSubmitFlushing);
+ 
+-static const char *SPIRVDisassemblyTarget = "SPIR-V (RenderDoc)";
++static const char *SPIRVDisassemblyTarget = "SPIR-V (RenderTest)";
+ static const char *AMDShaderInfoTarget = "AMD_shader_info";
+ static const char *KHRExecutablePropertiesTarget = "KHR_pipeline_executable_properties";
+ 
+@@ -5752,7 +5752,7 @@
+     {
+       RETURN_ERROR_RESULT(ResultCode::APIIncompatibleVersion,
+                           "Vulkan capture is incompatible version %llu, newest supported by this "
+-                          "build of RenderDoc is %llu",
++                          "build of RenderTest is %llu",
+                           ver, VkInitParams::CurrentVersion);
+     }
+ 
+--- a/renderdoc/driver/vulkan/vk_shader_cache.cpp
++++ b/renderdoc/driver/vulkan/vk_shader_cache.cpp
+@@ -292,7 +292,7 @@
+ 
+     for(const VkPhysicalDeviceToolProperties &t : tools)
+     {
+-      if(rdcstr(t.name) == "RenderDoc")
++      if(rdcstr(t.name) == "RenderTest")
+       {
+         RDCLOG("Enabling debug info for self-captured shaders");
+         compileSettings.debugInfo = true;
+--- a/renderdoc/driver/vulkan/wrappers/vk_device_funcs.cpp
++++ b/renderdoc/driver/vulkan/wrappers/vk_device_funcs.cpp
+@@ -49,9 +49,9 @@
+ const static VkApplicationInfo renderdocAppInfo = {
+     VK_STRUCTURE_TYPE_APPLICATION_INFO,
+     NULL,
+-    "RenderDoc Capturing App",
++    "RenderTest Capturing App",
+     VK_MAKE_VERSION(RENDERDOC_VERSION_MAJOR, RENDERDOC_VERSION_MINOR, 0),
+-    "RenderDoc",
++    "RenderTest",
+     VK_MAKE_VERSION(RENDERDOC_VERSION_MAJOR, RENDERDOC_VERSION_MINOR, 0),
+     VK_API_VERSION_1_0,
+ };
+@@ -586,7 +586,7 @@
+ 
+   const bool internalInstance =
+       (pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pApplicationName &&
+-       rdcstr(pCreateInfo->pApplicationInfo->pApplicationName) == "RenderDoc forced instance");
++       rdcstr(pCreateInfo->pApplicationInfo->pApplicationName) == "RenderTest forced instance");
+ 
+   VkLayerInstanceCreateInfo *layerCreateInfo = (VkLayerInstanceCreateInfo *)pCreateInfo->pNext;
+ 
+@@ -626,7 +626,7 @@
+           (VkDebugReportCallbackCreateInfoEXT *)pCreateInfo->pNext;
+ 
+       rdcstr msg =
+-          "RenderDoc's layer should NEVER be activated manually. Do not include it in "
++          "RenderTest's layer should NEVER be activated manually. Do not include it in "
+           "vkCreateInstance's instance layers.";
+ 
+       RDCERR("%s", msg.c_str());
+@@ -670,17 +670,17 @@
+   {
+     if(!IsSupportedExtension(modifiedCreateInfo.ppEnabledExtensionNames[i]))
+     {
+-      RDCERR("RenderDoc does not support instance extension '%s'.",
++      RDCERR("RenderTest does not support instance extension '%s'.",
+              modifiedCreateInfo.ppEnabledExtensionNames[i]);
+       RDCERR(
+           "For KHR/EXT extensions file an issue on github to request support: "
+-          "https://github.com/baldurk/renderdoc");
++          "https://github.com/baldurk/rendertest");
+ 
+       // see if any debug report callbacks were passed in the pNext chain
+       VkDebugReportCallbackCreateInfoEXT *report =
+           (VkDebugReportCallbackCreateInfoEXT *)pCreateInfo->pNext;
+ 
+-      rdcstr msg = StringFormat::Fmt("RenderDoc does not support requested instance extension: %s.",
++      rdcstr msg = StringFormat::Fmt("RenderTest does not support requested instance extension: %s.",
+                                      modifiedCreateInfo.ppEnabledExtensionNames[i]);
+ 
+       while(report)
+@@ -1654,7 +1654,7 @@
+     {
+       SET_ERROR_RESULT(
+           m_FailedReplayResult, ResultCode::APIHardwareUnsupported,
+-          "Can't add a queue with required properties for RenderDoc! Unsupported configuration");
++          "Can't add a queue with required properties for RenderTest! Unsupported configuration");
+       return false;
+     }
+ 
+@@ -2252,7 +2252,7 @@
+     {
+       SET_ERROR_RESULT(
+           m_FailedReplayResult, ResultCode::APIHardwareUnsupported,
+-          "Can't add a queue with required properties for RenderDoc! Unsupported configuration");
++          "Can't add a queue with required properties for RenderTest! Unsupported configuration");
+       return false;
+     }
+ 
+@@ -3897,7 +3897,7 @@
+           "robustBufferAccess is available, but cannot be enabled due to "
+           "robustBufferAccessUpdateAfterBind not being avilable and some UpdateAfterBind features "
+           "being enabled. "
+-          "out of bounds access due to bugs in application or RenderDoc may cause crashes");
++          "out of bounds access due to bugs in application or RenderTest may cause crashes");
+     }
+     else
+     {
+@@ -3907,7 +3907,7 @@
+       else
+         RDCWARN(
+             "robustBufferAccess = false, out of bounds access due to bugs in application or "
+-            "RenderDoc may cause crashes");
++            "RenderTest may cause crashes");
+     }
+ 
+     if(availFeatures.shaderInt64)
+@@ -4756,14 +4756,14 @@
+   {
+     if(!IsSupportedExtension(createInfo.ppEnabledExtensionNames[i]))
+     {
+-      RDCERR("RenderDoc does not support device extension '%s'.",
++      RDCERR("RenderTest does not support device extension '%s'.",
+              createInfo.ppEnabledExtensionNames[i]);
+       RDCERR(
+           "For KHR/EXT extensions file an issue on github to request support: "
+-          "https://github.com/baldurk/renderdoc");
++          "https://github.com/baldurk/rendertest");
+ 
+       SendUserDebugMessage(
+-          StringFormat::Fmt("RenderDoc does not support requested device extension: %s.",
++          StringFormat::Fmt("RenderTest does not support requested device extension: %s.",
+                             createInfo.ppEnabledExtensionNames[i]));
+ 
+       return VK_ERROR_EXTENSION_NOT_PRESENT;
+@@ -4772,7 +4772,7 @@
+ 
+   if(m_Device != VK_NULL_HANDLE)
+   {
+-    SendUserDebugMessage("RenderDoc does not support multiple simultaneous logical devices.");
++    SendUserDebugMessage("RenderTest does not support multiple simultaneous logical devices.");
+     return VK_ERROR_INITIALIZATION_FAILED;
+   }
+ 
+@@ -4968,7 +4968,7 @@
+         "robustBufferAccess is available, but cannot be enabled due to "
+         "robustBufferAccessUpdateAfterBind not being avilable and some UpdateAfterBind features "
+         "being enabled. "
+-        "out of bounds access due to bugs in application or RenderDoc may cause crashes");
++        "out of bounds access due to bugs in application or RenderTest may cause crashes");
+ 
+     for(const char *e : Extensions)
+     {
+@@ -4986,7 +4986,7 @@
+     else
+       RDCWARN(
+           "robustBufferAccess = false, out of bounds access due to bugs in application or "
+-          "RenderDoc may cause crashes");
++          "RenderTest may cause crashes");
+   }
+ 
+   // enable this feature as it's needed at capture time to save MSAA initial states
+--- a/renderdoc/driver/vulkan/wrappers/vk_get_funcs.cpp
++++ b/renderdoc/driver/vulkan/wrappers/vk_get_funcs.cpp
+@@ -1355,10 +1355,10 @@
+ 
+   VkPhysicalDeviceToolProperties &props = *(pToolProperties + *pToolCount);
+ 
+-  const rdcstr name = "RenderDoc"_lit;
++  const rdcstr name = "RenderTest"_lit;
+   const rdcstr version = StringFormat::Fmt(
+       "%s (%s)", FULL_VERSION_STRING, GitVersionHash[0] == 'N' ? "Unknown revision" : GitVersionHash);
+-  const rdcstr description = "Debugging capture layer for RenderDoc"_lit;
++  const rdcstr description = "Debugging capture layer for RenderTest"_lit;
+ 
+   RDCASSERTMSG("Name is too long for VkPhysicalDeviceToolProperties",
+                name.length() < sizeof(props.name));
+--- a/renderdoc/driver/vulkan/wrappers/vk_misc_funcs.cpp
++++ b/renderdoc/driver/vulkan/wrappers/vk_misc_funcs.cpp
+@@ -2322,10 +2322,10 @@
+ 
+       user->createInfo.pfnCallback(flags, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                                    (uint64_t)user->wrappedInstance, 1, 1, "RDOC",
+-                                   "While debugging through RenderDoc, debug output through "
++                                   "While debugging through RenderTest, debug output through "
+                                    "validation layers is suppressed.\n"
+                                    "To show debug output look at the 'DebugOutputMute' capture "
+-                                   "option in RenderDoc's API, but "
++                                   "option in RenderTest's API, but "
+                                    "be aware of false positives from the validation layers.",
+                                    user->createInfo.pUserData);
+     }
+@@ -2369,9 +2369,9 @@
+       data.messageIdNumber = 1;
+       data.pMessageIdName = NULL;
+       data.pMessage =
+-          "While debugging through RenderDoc, debug output through validation layers is "
++          "While debugging through RenderTest, debug output through validation layers is "
+           "suppressed.\n"
+-          "To show debug output look at the 'DebugOutputMute' capture option in RenderDoc's API, "
++          "To show debug output look at the 'DebugOutputMute' capture option in RenderTest's API, "
+           "but be aware of false positives from the validation layers.";
+       data.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CALLBACK_DATA_EXT;
+ 
+--- a/renderdoc/os/os_specific.cpp
++++ b/renderdoc/os/os_specific.cpp
+@@ -228,12 +228,12 @@
+     CHECK(!var.empty());
+     CHECK(var.length() > 1);
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var.empty());
+ 
+     EnvironmentModification mod;
+-    mod.name = "__renderdoc__unit_test_var";
++    mod.name = "__rendertest__unit_test_var";
+     mod.value = "test_value";
+     mod.sep = EnvSep::SemiColon;
+     mod.mod = EnvMod::Append;
+@@ -241,14 +241,14 @@
+     Process::RegisterEnvironmentModification(mod);
+     Process::ApplyEnvironmentModification();
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var == "test_value");
+ 
+     Process::RegisterEnvironmentModification(mod);
+     Process::ApplyEnvironmentModification();
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var == rdcstr("test_value;test_value"));
+ 
+@@ -257,7 +257,7 @@
+     Process::RegisterEnvironmentModification(mod);
+     Process::ApplyEnvironmentModification();
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var == rdcstr("test_value;test_value:test_value"));
+ 
+@@ -274,7 +274,7 @@
+     Process::RegisterEnvironmentModification(mod);
+     Process::ApplyEnvironmentModification();
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var == rdcstr("prepend1;test_value;test_value:test_value;prepend2"));
+ 
+@@ -285,7 +285,7 @@
+     Process::RegisterEnvironmentModification(mod);
+     Process::ApplyEnvironmentModification();
+ 
+-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
++    var = Process::GetEnvVariable("__rendertest__unit_test_var");
+ 
+     CHECK(var == rdcstr("reset"));
+   };
+--- a/renderdoc/os/posix/android/android_process.cpp
++++ b/renderdoc/os/posix/android/android_process.cpp
+@@ -64,7 +64,7 @@
+       fgets(line, sz - 1, f);
+ 
+       int port = 0;
+-      char *startpos = strstr(line, "@renderdoc_");
++      char *startpos = strstr(line, "@rendertest_");
+ 
+       if(startpos == NULL)
+       {
+@@ -72,7 +72,7 @@
+         continue;
+       }
+ 
+-      int num = sscanf(startpos, "@renderdoc_%d", &port);
++      int num = sscanf(startpos, "@rendertest_%d", &port);
+ 
+       // find open listen abstract socket on 'renderdoc_<port>'
+       if(num == 1 && port >= RenderDoc_FirstTargetControlPort &&
+@@ -89,8 +89,8 @@
+   if(ret == 0)
+   {
+     RDCWARN(
+-        "Couldn't locate renderdoc target control listening port between @renderdoc_%u and "
+-        "@renderdoc_%u in %s",
++        "Couldn't locate rendertest target control listening port between @rendertest_%u and "
++        "@rendertest_%u in %s",
+         (uint32_t)RenderDoc_FirstTargetControlPort, (uint32_t)RenderDoc_LastTargetControlPort,
+         procfile.c_str());
+   }
+--- a/renderdoc/os/posix/android/android_stringio.cpp
++++ b/renderdoc/os/posix/android/android_stringio.cpp
+@@ -32,7 +32,7 @@
+ #include "common/formatting.h"
+ #include "os/os_specific.h"
+ 
+-#define LOGCAT_TAG "renderdoc"
++#define LOGCAT_TAG "rendertest"
+ 
+ namespace Keyboard
+ {
+--- a/renderdoc/os/posix/linux/linux_process.cpp
++++ b/renderdoc/os/posix/linux/linux_process.cpp
+@@ -150,7 +150,7 @@
+ 
+   if(ret == 0)
+   {
+-    RDCWARN("Couldn't locate renderdoc target control listening port between %u and %u in %s",
++    RDCWARN("Couldn't locate rendertest target control listening port between %u and %u in %s",
+             (uint32_t)RenderDoc_FirstTargetControlPort, (uint32_t)RenderDoc_LastTargetControlPort,
+             procfile.c_str());
+ 
+--- a/renderdoc/os/posix/posix_libentry.cpp
++++ b/renderdoc/os/posix/posix_libentry.cpp
+@@ -31,7 +31,8 @@
+ // DllMain equivalent
+ void library_loaded()
+ {
+-  if(LibraryHooks::Detect(STRINGIZE(RDOC_BASE_NAME) "__replay__marker"))
++  if(LibraryHooks::Detect("renderdoc__replay__marker") ||
++     LibraryHooks::Detect(STRINGIZE(RDOC_BASE_NAME) "__replay__marker"))
+   {
+     RDCDEBUG("Not creating hooks - in replay app");
+ 
+--- a/renderdoc/os/posix/posix_network.cpp
++++ b/renderdoc/os/posix/posix_network.cpp
+@@ -413,7 +413,7 @@
+     return NULL;
+   }
+ 
+-  rdcstr socketName = StringFormat::Fmt("renderdoc_%d", port);
++  rdcstr socketName = StringFormat::Fmt("rendertest_%d", port);
+ 
+   sockaddr_un addr;
+   RDCEraseEl(addr);
+--- a/renderdoc/os/posix/posix_stringio.cpp
++++ b/renderdoc/os/posix/posix_stringio.cpp
+@@ -151,7 +151,7 @@
+   dladdr((void *)&soLocator, &info);
+   rdcstr path = info.dli_fname ? info.dli_fname : "";
+   path = get_dirname(path);
+-  rdcstr replay = path + "/qrenderdoc";
++  rdcstr replay = path + "/qrendertest";
+ 
+   FILE *f = FileIO::fopen(replay, FileIO::ReadText);
+   if(f)
+@@ -171,7 +171,7 @@
+ #endif
+ 
+   // leave the lib/ folder, and go into bin/
+-  replay += "../bin/qrenderdoc";
++  replay += "../bin/qrendertest";
+ 
+   f = FileIO::fopen(replay, FileIO::ReadText);
+   if(f)
+@@ -182,7 +182,7 @@
+ 
+   // random guesses!
+   const char *guess[] = {"/opt/renderdoc/qrenderdoc", "/opt/renderdoc/bin/qrenderdoc",
+-                         "/usr/local/bin/qrenderdoc", "/usr/bin/qrenderdoc"};
++                         "/usr/local/bin/qrendertest", "/usr/bin/qrendertest"};
+ 
+   for(size_t i = 0; i < ARRAY_COUNT(guess); i++)
+   {
+@@ -195,7 +195,7 @@
+   }
+ 
+   // out of ideas, just return the filename and hope it's in PATH
+-  return "qrenderdoc";
++  return "qrendertest";
+ }
+ 
+ void GetDefaultFiles(const rdcstr &logBaseName, rdcstr &capture_filename, rdcstr &logging_filename,
+@@ -232,7 +232,7 @@
+   }
+ 
+   capture_filename =
+-      StringFormat::Fmt("%s/RenderDoc/%s_%04d.%02d.%02d_%02d.%02d.rdc", temp_folder, mod,
++      StringFormat::Fmt("%s/RenderTest/%s_%04d.%02d.%02d_%02d.%02d.rdc", temp_folder, mod,
+                         1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min);
+ 
+   // set by UI when launching programs so all logging goes to the same file
+@@ -241,7 +241,7 @@
+     logging_filename = logfile_override;
+   else
+     logging_filename = StringFormat::Fmt(
+-        "%s/RenderDoc/%s_%04d.%02d.%02d_%02d.%02d.%02d.log", temp_folder, logBaseName.c_str(),
++        "%s/RenderTest/%s_%04d.%02d.%02d_%02d.%02d.%02d.log", temp_folder, logBaseName.c_str(),
+         1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+ }
+ 
+--- a/renderdoc/os/win32/sys_win32_hooks.cpp
++++ b/renderdoc/os/win32/sys_win32_hooks.cpp
+@@ -360,7 +360,7 @@
+       if(isIgnoredLauncher(app))
+         inject = false;
+ 
+-      if(app.contains("renderdoccmd.exe") || app.contains("qrenderdoc.exe"))
++      if(app.contains("rendertestcmd.exe") || app.contains("qrendertest.exe"))
+       {
+         inject = false;
+       }
+@@ -372,7 +372,7 @@
+       if(isIgnoredLauncher(cmd))
+         inject = false;
+ 
+-      if(cmd.contains("renderdoccmd.exe") || cmd.contains("qrenderdoc.exe"))
++      if(cmd.contains("rendertestcmd.exe") || cmd.contains("qrendertest.exe"))
+       {
+         inject = false;
+       }
+--- a/renderdoc/os/win32/win32_callstack.cpp
++++ b/renderdoc/os/win32/win32_callstack.cpp
+@@ -763,7 +763,7 @@
+     for(;;)
+     {
+       DWORD read =
+-          GetPrivateProfileStringW(L"renderdoc", L"ignores", NULL, inputBuf, sz, configPath.c_str());
++          GetPrivateProfileStringW(L"rendertest", L"ignores", NULL, inputBuf, sz, configPath.c_str());
+ 
+       if(read == sz - 1)
+       {
+@@ -779,7 +779,7 @@
+     rdcstr ignores = StringFormat::Wide2UTF8(inputBuf);
+ 
+     {
+-      DWORD read = GetPrivateProfileStringW(L"renderdoc", L"msdiapath", NULL, inputBuf, sz,
++      DWORD read = GetPrivateProfileStringW(L"rendertest", L"msdiapath", NULL, inputBuf, sz,
+                                             configPath.c_str());
+ 
+       if(read > 0)
+@@ -969,7 +969,7 @@
+           pdbName = get_dirname(defaultPdb) + "\\" + get_basename(defaultPdb);
+ 
+           // prompt for new pdbName, unless it's renderdoc or dbghelp, or we're non-interactive
+-          if(pdbName.contains("renderdoc.") || pdbName.contains("dbghelp.") ||
++          if(pdbName.contains("rendertest.") || pdbName.contains("dbghelp.") ||
+              pdbName.contains("symsrv.") || !interactive)
+             pdbName = "";
+           else
+@@ -1009,7 +1009,7 @@
+ 
+       // silently ignore renderdoc.dll, dbghelp.dll, and symsrv.dll without asking to permanently
+       // ignore
+-      if(m.name.contains("renderdoc.") || m.name.contains("dbghelp.") || m.name.contains("symsrv."))
++      if(m.name.contains("rendertest.") || m.name.contains("dbghelp.") || m.name.contains("symsrv."))
+         continue;
+ 
+       // if we're not interactive, just continue
+--- a/renderdoc/os/win32/win32_libentry.cpp
++++ b/renderdoc/os/win32/win32_libentry.cpp
+@@ -50,7 +50,8 @@
+   }
+ 
+   // search for an exported symbol with this name, typically renderdoc__replay__marker
+-  if(LibraryHooks::Detect(STRINGIZE(RDOC_BASE_NAME) "__replay__marker"))
++  if(LibraryHooks::Detect("renderdoc__replay__marker") ||
++     LibraryHooks::Detect(STRINGIZE(RDOC_BASE_NAME) "__replay__marker"))
+   {
+     RDCDEBUG("Not creating hooks - in replay app");
+ 
+--- a/renderdoc/os/win32/win32_process.cpp
++++ b/renderdoc/os/win32/win32_process.cpp
+@@ -65,12 +65,6 @@
+   if(GetModuleFileNameW(GetRenderDocModule(), path, MAX_PATH - 1) != 0)
+   {
+     rdcstr current = StringFormat::Wide2UTF8(path);
+-    if(strlower(get_basename(current)) == "rdoc.dll")
+-      return current;
+-
+-    rdcstr neutral = get_dirname(current) + "/rdoc.dll";
+-    if(GetFileAttributesW(StringFormat::UTF82Wide(neutral).c_str()) != INVALID_FILE_ATTRIBUTES)
+-      return neutral;
+     return current;
+   }
+   return {};
+@@ -675,7 +669,7 @@
+       RDCDEBUG("Timed out waiting for debugger, gave up after %u s", opts.delayForDebugger);
+   }
+ 
+-  RDCLOG("Injecting renderdoc into process %lu", pid);
++  RDCLOG("Injecting rendertest into process %lu", pid);
+ 
+   wchar_t renderdocPath[MAX_PATH] = {0};
+   rdcwstr targetPath = StringFormat::UTF82Wide(GetTargetRenderDocPath());
+@@ -781,8 +775,8 @@
+       CloseHandle(hProcess);
+       RDResult result;
+       SET_ERROR_RESULT(result, ResultCode::IncompatibleProcess,
+-                       "Can't capture 64-bit program with 32-bit build of RenderDoc. Please run a "
+-                       "64-bit build of RenderDoc");
++                       "Can't capture 64-bit program with 32-bit build of RenderTest. Please run a "
++                       "64-bit build of RenderTest");
+       return {result, 0};
+     }
+   }
+@@ -805,7 +799,7 @@
+ 
+       renderdocPath[idx] = 0;
+ 
+-      wcscat_s(renderdocPath, L"\\Win32\\Development\\renderdoccmd.exe");
++      wcscat_s(renderdocPath, L"\\Win32\\Development\\rendertestcmd.exe");
+     }
+ 
+     if(!devLocation)
+@@ -818,7 +812,7 @@
+ 
+         renderdocPath[idx] = 0;
+ 
+-        wcscat_s(renderdocPath, L"\\Win32\\Release\\renderdoccmd.exe");
++        wcscat_s(renderdocPath, L"\\Win32\\Release\\rendertestcmd.exe");
+       }
+     }
+ 
+@@ -833,7 +827,7 @@
+         *slash = 0;
+ 
+       // append path
+-      wcscat_s(renderdocPath, L"\\x86\\renderdoccmd.exe");
++      wcscat_s(renderdocPath, L"\\x86\\rendertestcmd.exe");
+     }
+ #else
+     // if it looks like we're in the development environment, look for the alternate bitness in the
+@@ -845,7 +839,7 @@
+ 
+       renderdocPath[idx] = 0;
+ 
+-      wcscat_s(renderdocPath, L"\\x64\\Development\\renderdoccmd.exe");
++      wcscat_s(renderdocPath, L"\\x64\\Development\\rendertestcmd.exe");
+     }
+ 
+     if(!devLocation)
+@@ -858,7 +852,7 @@
+ 
+         renderdocPath[idx] = 0;
+ 
+-        wcscat_s(renderdocPath, L"\\x64\\Release\\renderdoccmd.exe");
++        wcscat_s(renderdocPath, L"\\x64\\Release\\rendertestcmd.exe");
+       }
+     }
+ 
+@@ -878,7 +872,7 @@
+         *slash = 0;
+ 
+       // append path
+-      wcscat_s(renderdocPath, L"\\renderdoccmd.exe");
++      wcscat_s(renderdocPath, L"\\rendertestcmd.exe");
+     }
+ #endif
+ 
+@@ -996,12 +990,12 @@
+       RDResult result;
+ #if RENDERDOC_OFFICIAL_BUILD
+       SET_ERROR_RESULT(result, ResultCode::InternalError,
+-                       "Can't run 32-bit renderdoccmd to capture 32-bit program.");
++                       "Can't run 32-bit rendertestcmd to capture 32-bit program.");
+ #else
+       SET_ERROR_RESULT(
+           result, ResultCode::InternalError,
+-          "Can't run 32-bit renderdoccmd to capture 32-bit program."
+-          "If this is a locally built RenderDoc you must build both 32-bit and 64-bit versions.");
++          "Can't run 32-bit rendertestcmd to capture 32-bit program."
++          "If this is a locally built RenderTest you must build both 32-bit and 64-bit versions.");
+ #endif
+       CloseHandle(hProcess);
+       return {result, 0};
+@@ -1033,7 +1027,7 @@
+       ResultCode code = (ResultCode)exitCode;
+ 
+       RDResult result;
+-      SET_ERROR_RESULT(result, code, "32-bit renderdoccmd returned '%s'", ToStr(code).c_str());
++      SET_ERROR_RESULT(result, code, "32-bit rendertestcmd returned '%s'", ToStr(code).c_str());
+       return {code, 0};
+     }
+ 
+@@ -1466,7 +1460,7 @@
+     RDResult result;
+     SET_ERROR_RESULT(
+         result, ResultCode::InjectionFailed,
+-        "For safety reasons RenderDoc does not support capturing executables with a "
++        "For safety reasons RenderTest does not support capturing executables with a "
+         "reserved system filename such as '%s'. Please rename your executable to capture.",
+         get_basename(app).c_str());
+     return {result, 0};
+@@ -1752,7 +1746,7 @@
+ 
+   RETURN_ERROR_RESULT(ResultCode::InjectionFailed,
+                       "Error updating registry to enable global hook.\n"
+-                      "Check that RenderDoc is correctly running as administrator.");
++                      "Check that RenderTest is correctly running as administrator.");
+ }
+ 
+ #define REG_CHECK(msg)                                    \
+@@ -1914,7 +1908,7 @@
+   // write it to disk but don't fail if we can't, just print it to the log and keep going.
+   wchar_t reg_backup[MAX_PATH];
+   GetTempPathW(MAX_PATH, reg_backup);
+-  wcscat_s(reg_backup, L"RenderDoc_RestoreGlobalHook.reg");
++  wcscat_s(reg_backup, L"RenderTest_RestoreGlobalHook.reg");
+ 
+   FILE *f = NULL;
+   _wfopen_s(&f, reg_backup, L"w");
+@@ -2033,7 +2027,7 @@
+   renderdocPath = get_dirname(renderdocPath);
+ 
+   // the native renderdoccmd.exe is always next to the dll. Wow32 will be somewhere else
+-  rdcstr cmdpathNative = renderdocPath + "\\renderdoccmd.exe";
++  rdcstr cmdpathNative = renderdocPath + "\\rendertestcmd.exe";
+   rdcstr cmdpathWow32;
+ 
+   rdcstr shimpathNative = renderdocPath;
+@@ -2042,7 +2036,7 @@
+ #if ENABLED(RDOC_X64)
+ 
+   // native shim is just renderdocshim64.dll
+-  shimpathNative = renderdocPath + "\\renderdocshim64.dll";
++  shimpathNative = renderdocPath + "\\rendertestshim64.dll";
+ 
+   // if it looks like we're in the development environment, look for the alternate bitness in the
+   // corresponding folder
+@@ -2051,8 +2045,8 @@
+   {
+     renderdocPath.erase(devLocation, ~0U);
+ 
+-    shimpathWow32 = renderdocPath + "\\Win32\\Development\\renderdocshim32.dll";
+-    cmdpathWow32 = renderdocPath + "\\Win32\\Development\\renderdoccmd.exe";
++    shimpathWow32 = renderdocPath + "\\Win32\\Development\\rendertestshim32.dll";
++    cmdpathWow32 = renderdocPath + "\\Win32\\Development\\rendertestcmd.exe";
+   }
+   else
+   {
+@@ -2062,22 +2056,22 @@
+     {
+       renderdocPath.erase(devLocation, ~0U);
+ 
+-      shimpathWow32 = renderdocPath + "\\Win32\\Release\\renderdocshim32.dll";
+-      cmdpathWow32 = renderdocPath + "\\Win32\\Release\\renderdoccmd.exe";
++      shimpathWow32 = renderdocPath + "\\Win32\\Release\\rendertestshim32.dll";
++      cmdpathWow32 = renderdocPath + "\\Win32\\Release\\rendertestcmd.exe";
+     }
+   }
+ 
+   // if we're not in the dev environment, assume it's under a x86\ subfolder
+   if(devLocation < 0)
+   {
+-    shimpathWow32 = renderdocPath + "\\x86\\renderdocshim32.dll";
+-    cmdpathWow32 = renderdocPath + "\\x86\\renderdoccmd.exe";
++    shimpathWow32 = renderdocPath + "\\x86\\rendertestshim32.dll";
++    cmdpathWow32 = renderdocPath + "\\x86\\rendertestcmd.exe";
+   }
+ 
+ #else
+ 
+   // nothing fancy to do here for 32-bit, just point the shim next to our dll.
+-  shimpathNative = renderdocPath + "\\renderdocshim32.dll";
++  shimpathNative = renderdocPath + "\\rendertestshim32.dll";
+ 
+ #endif
+ 
+@@ -2165,7 +2159,7 @@
+   {
+     CloseHandle(hookdata.dataNative.pipe);
+     RestoreRegistry(hookdata);
+-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
++    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch rendertestcmd from '%s' (err %u)",
+                         cmdpathNative.c_str(), err);
+   }
+ 
+@@ -2226,7 +2220,7 @@
+     CloseHandle(hookdata.dataNative.pipe);
+     CloseHandle(hookdata.dataWow32.pipe);
+     RestoreRegistry(hookdata);
+-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
++    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch rendertestcmd from '%s' (err %u)",
+                         cmdpathWow32.c_str(), err);
+   }
+ 
+--- a/renderdoc/os/win32/win32_stringio.cpp
++++ b/renderdoc/os/win32/win32_stringio.cpp
+@@ -290,7 +290,7 @@
+ 
+   rdcstr path = StringFormat::Wide2UTF8(curFile);
+   path = get_dirname(path);
+-  rdcstr exe = path + "/qrenderdoc.exe";
++  rdcstr exe = path + "/qrendertest.exe";
+ 
+   FILE *f = FileIO::fopen(exe, FileIO::ReadBinary);
+   if(f)
+@@ -301,7 +301,7 @@
+ 
+   // if qrenderdoc.exe doesn't live in the same dir, we must be in x86/
+   // so look one up the tree.
+-  exe = path + "/../qrenderdoc.exe";
++  exe = path + "/../qrendertest.exe";
+ 
+   f = FileIO::fopen(exe, FileIO::ReadBinary);
+   if(f)
+@@ -317,7 +317,7 @@
+   DWORD type = 0;
+   DWORD dataSize = sizeof(curFile);
+   RDCEraseEl(curFile);
+-  RegGetValueW(HKEY_CLASSES_ROOT, L"RenderDoc.RDCCapture.1\\DefaultIcon", NULL, RRF_RT_ANY, &type,
++  RegGetValueW(HKEY_CLASSES_ROOT, L"RenderTest.RDCCapture.1\\DefaultIcon", NULL, RRF_RT_ANY, &type,
+                (void *)curFile, &dataSize);
+ 
+   if(type == REG_EXPAND_SZ || type == REG_SZ)
+@@ -359,7 +359,7 @@
+ 
+   wchar_t *filename_start = temp_filename + wcslen(temp_filename);
+ 
+-  wsprintf(filename_start, L"RenderDoc\\%ls_%04d.%02d.%02d_%02d.%02d.rdc", mod, 1900 + now.tm_year,
++  wsprintf(filename_start, L"RenderTest\\%ls_%04d.%02d.%02d_%02d.%02d.rdc", mod, 1900 + now.tm_year,
+            now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min);
+ 
+   capture_filename = StringFormat::Wide2UTF8(temp_filename);
+@@ -368,7 +368,7 @@
+ 
+   rdcwstr wbase = StringFormat::UTF82Wide(logBaseName);
+ 
+-  wsprintf(filename_start, L"RenderDoc\\%ls_%04d.%02d.%02d_%02d.%02d.%02d.log", wbase.c_str(),
++  wsprintf(filename_start, L"RenderTest\\%ls_%04d.%02d.%02d_%02d.%02d.%02d.log", wbase.c_str(),
+            1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+ 
+   logging_filename = StringFormat::Wide2UTF8(temp_filename);
+@@ -404,7 +404,7 @@
+   while(ret.back() == '/' || ret.back() == '\\')
+     ret.pop_back();
+ 
+-  ret += "\\renderdoc\\" + filename;
++  ret += "\\rendertest\\" + filename;
+ 
+   CreateParentDirectory(ret);
+ 
+--- a/renderdoc/renderdoc.vcxproj
++++ b/renderdoc/renderdoc.vcxproj
+@@ -23,7 +23,7 @@
+     <ProjectGuid>{E2B46D67-90E2-40B6-9597-72930E7845E5}</ProjectGuid>
+     <Keyword>Win32Proj</Keyword>
+     <RootNamespace>renderdoc</RootNamespace>
+-    <ProjectName>renderdoc</ProjectName>
++    <ProjectName>rendertest</ProjectName>
+   </PropertyGroup>
+   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+@@ -815,16 +815,16 @@
+     <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\fixedcol.hlsl&quot; -T ps_6_0 -DVARIANT=1 -E main -Qstrip_reflect -Fo &quot;$(DXILBakedDir)fixedcol_1.dxbc&quot;" />
+     <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\fixedcol.hlsl&quot; -T ps_6_0 -DVARIANT=2 -E main -Qstrip_reflect -Fo &quot;$(DXILBakedDir)fixedcol_2.dxbc&quot;" />
+     <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\fixedcol.hlsl&quot; -T ps_6_0 -DVARIANT=3 -E main -Qstrip_reflect -Fo &quot;$(DXILBakedDir)fixedcol_3.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\quadoverdraw.hlsl&quot; -T ps_6_0 -DD3D12=1 -E RENDERDOC_QuadOverdrawPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)quadwrite.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -E RENDERDOC_PrimitiveIDPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_primitiveid.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=0 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_0.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=1 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_1.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=2 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_2.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=3 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_3.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=4 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_4.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=5 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_5.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=6 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_6.dxbc&quot;" />
+-    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=7 -E RENDERDOC_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_7.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\quadoverdraw.hlsl&quot; -T ps_6_0 -DD3D12=1 -E RENDERTEST_QuadOverdrawPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)quadwrite.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -E RENDERTEST_PrimitiveIDPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_primitiveid.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=0 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_0.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=1 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_1.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=2 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_2.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=3 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_3.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=4 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_4.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=5 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_5.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=6 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_6.dxbc&quot;" />
++    <Exec Command="&quot;$(DXCExecutable)&quot; &quot;$(ProjectDir)data\hlsl\d3d12_pixelhistory.hlsl&quot; -T ps_6_0 -DRT=7 -E RENDERTEST_PixelHistoryFixedColPS -Qstrip_reflect -Fo &quot;$(DXILBakedDir)pixelhistory_fixedcol_7.dxbc&quot;" />
+   </Target>
+   <ItemGroup>
+     <Natvis Include="renderdoc.natvis" />
+@@ -907,9 +907,6 @@
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+   <Target Name="AfterBuild" AfterTargets="Build">
+-    <!-- FFXVI rejects the stock renderdoc.dll filename. Keep a neutral target copy beside the
+-         host DLL; Launch/ExecuteAndInject selects it automatically when present. -->
+-    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(OutDir)rdoc.dll" SkipUnchangedFiles="true" />
+     <Copy SourceFiles="$(ProjectDir)api\app\renderdoc_app.h" DestinationFolder="$(OutDir)">
+     </Copy>
+     <Copy SourceFiles="$(ProjectDir)3rdparty\dbghelp\$(Platform)\symsrv.dll" DestinationFolder="$(OutDir)">
+--- a/renderdoc/replay/app_api.cpp
++++ b/renderdoc/replay/app_api.cpp
+@@ -406,7 +406,7 @@
+ {
+   if(outAPIPointers == NULL)
+   {
+-    RDCERR("Invalid call to RENDERDOC_GetAPI with NULL outAPIPointers");
++    RDCERR("Invalid call to RENDERTEST_GetAPI with NULL outAPIPointers");
+     return 0;
+   }
+ 
+@@ -444,7 +444,7 @@
+ 
+   if(ret)
+   {
+-    RDCLOG("Initialising RenderDoc API version %d.%d.%d for requested version %d", major, minor,
++    RDCLOG("Initialising RenderTest API version %d.%d.%d for requested version %d", major, minor,
+            patch, version);
+     return 1;
+   }
+--- a/renderdoc/replay/entry_points.cpp
++++ b/renderdoc/replay/entry_points.cpp
+@@ -333,7 +333,7 @@
+   if(report.empty())
+   {
+     report = FileIO::GetTempFolderFilename() +
+-             StringFormat::sntimef(Timing::GetUTCTime(), "/renderdoc_report_%H%M%S.zip");
++             StringFormat::sntimef(Timing::GetUTCTime(), "/rendertest_report_%H%M%S.zip");
+   }
+ 
+   FileIO::Delete(report);
+@@ -676,7 +676,7 @@
+         Publisher[0] = 0;
+ 
+       // if this is our key, set the version number
+-      if(!strcmp(DisplayName, "RenderDoc") && !strcmp(Publisher, "Baldur Karlsson"))
++      if(!strcmp(DisplayName, "RenderTest") && !strcmp(Publisher, "Baldur Karlsson"))
+       {
+         DWORD Version = (RENDERDOC_VERSION_MAJOR << 24) | (RENDERDOC_VERSION_MINOR << 16);
+         DWORD VersionMajor = RENDERDOC_VERSION_MAJOR;
+--- a/renderdoc/replay/replay_controller.cpp
++++ b/renderdoc/replay/replay_controller.cpp
+@@ -1773,7 +1773,7 @@
+     return "";
+   }
+ 
+-  rdcstr path = FileIO::GetTempFolderFilename() + "/renderdoc_rgp_capture.rgp";
++  rdcstr path = FileIO::GetTempFolderFilename() + "/rendertest_rgp_capture.rgp";
+ 
+   FileIO::Delete(path);
+ 
+--- a/renderdoccmd/renderdoccmd.vcxproj
++++ b/renderdoccmd/renderdoccmd.vcxproj
+@@ -22,7 +22,7 @@
+     <ProjectGuid>{D03DF2F9-513C-4084-BBDD-1DEE8D9250D7}</ProjectGuid>
+     <Keyword>Win32Proj</Keyword>
+     <RootNamespace>renderdoccmd</RootNamespace>
+-    <ProjectName>renderdoccmd</ProjectName>
++    <ProjectName>rendertestcmd</ProjectName>
+   </PropertyGroup>
+   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+--- a/renderdoccmd/renderdoccmd_win32.cpp
++++ b/renderdoccmd/renderdoccmd_win32.cpp
+@@ -434,7 +434,7 @@
+     // run original UI exe (as admin still) and tell it an update succeeded so that it can do any last updates
+     std::wstring cmdline = L"\"";
+     cmdline += wide_path;
+-    cmdline += L"/qrenderdoc.exe\" ";
++    cmdline += L"/qrendertest.exe\" ";
+     if(successful)
+       cmdline += L"--updatedone_admin";
+     else
+@@ -509,7 +509,7 @@
+           show.vt = VT_I4;
+           show.lVal = SW_SHOWNORMAL;
+ 
+-          std::wstring qrenderdoc = wide_path + L"/qrenderdoc.exe";
++          std::wstring qrenderdoc = wide_path + L"/qrendertest.exe";
+ 
+           BSTR path = SysAllocStringLen(qrenderdoc.c_str(), (UINT)qrenderdoc.size());
+           memcpy(path, qrenderdoc.c_str(), qrenderdoc.size());
+@@ -533,7 +533,7 @@
+ 
+     cmdline = L"\"";
+     cmdline += wide_path;
+-    cmdline += L"/qrenderdoc.exe\" --updatedone";
++    cmdline += L"/qrendertest.exe\" --updatedone";
+     ZeroMemory(paramsAlloc, sizeof(wchar_t) * 512);
+     wcscpy_s(paramsAlloc, 511, cmdline.c_str());
+ 
+@@ -729,7 +729,7 @@
+ 
+           ZeroMemory(paramsAlloc, sizeof(wchar_t) * 512);
+ 
+-          _snwprintf_s(paramsAlloc, 511, 511, L"%s/qrenderdoc.exe --crash %s", exepath.c_str(),
++          _snwprintf_s(paramsAlloc, 511, 511, L"%s/qrendertest.exe --crash %s", exepath.c_str(),
+                        destjson.c_str());
+ 
+           PROCESS_INFORMATION pi;
+@@ -817,7 +817,7 @@
+     // Fetch the host RenderDoc module by address rather than by a fixed filename. The
+     // launcher may ship a byte-identical neutral target copy (rdoc.dll) for games that
+     // explicitly reject the stock renderdoc.dll name.
+-    HMODULE rdoc = GetModuleHandleA("renderdoc.dll");
++    HMODULE rdoc = GetModuleHandleA("rendertest.dll");
+     if(rdoc == NULL)
+       rdoc = GetModuleHandleA("rdoc.dll");
+ 
+--- a/renderdocshim/renderdocshim.h
++++ b/renderdocshim/renderdocshim.h
+@@ -33,9 +33,9 @@
+ };
+ 
+ #ifdef WIN64
+-#define GLOBAL_HOOK_DATA_NAME "RenderDocGlobalHookData64"
+-#define SHIM_DLL_NAME "renderdocshim64.dll"
++#define GLOBAL_HOOK_DATA_NAME "RenderTestGlobalHookData64"
++#define SHIM_DLL_NAME "rendertestshim64.dll"
+ #else
+-#define GLOBAL_HOOK_DATA_NAME "RenderDocGlobalHookData32"
+-#define SHIM_DLL_NAME "renderdocshim32.dll"
++#define GLOBAL_HOOK_DATA_NAME "RenderTestGlobalHookData32"
++#define SHIM_DLL_NAME "rendertestshim32.dll"
+ #endif
+--- a/renderdocshim/renderdocshim.vcxproj
++++ b/renderdocshim/renderdocshim.vcxproj
+@@ -22,6 +22,7 @@
+     <ProjectGuid>{6DEE3F12-F2F8-42CA-865A-578D0FD11387}</ProjectGuid>
+     <Keyword>Win32Proj</Keyword>
+     <RootNamespace>renderdocshim</RootNamespace>
++    <ProjectName>rendertestshim</ProjectName>
+   </PropertyGroup>
+   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

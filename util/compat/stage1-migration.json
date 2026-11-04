@@ -1,0 +1,947 @@
+{
+  "reference": "1601fb4f457d80e44442d51da2174ec8e0f86c7f",
+  "reference_parent": "d5725b9dedb15d695f4c6b1f0b0b3f33e44eaa2b",
+  "base": "4b870f6d0457eeab9c7a8f4708ae693bb62a209b",
+  "reference_paths": {
+    "renderdoc/android/android.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/android/android_utils.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/android/jdwp.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/api/app/renderdoc_app.h": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/api/replay/data_types.h": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/api/replay/renderdoc_tostr.inl": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/api/replay/version.h": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/common/globalconfig.h": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/core/core.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/core/remote_server.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/core/settings.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d11/d3d11_context_wrap.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d11/d3d11_debug.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d11/d3d11_device.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d11/d3d11_rendertext.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d11/d3d11_rendertexture.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d11/d3d11_replay.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d12/d3d12_debug.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d12/d3d12_device.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d12/d3d12_device_wrap.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d12/d3d12_manager.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d12/d3d12_overlay.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d12/d3d12_rendertext.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d12/d3d12_rendertexture.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/d3d12/d3d12_replay.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d12/d3d12_sdk_select.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/d3d12/d3d12_shader_cache.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/dxgi/dxgi_hooks.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/egl_hooks.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/gl_common.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/gl_driver.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/gl_overlay.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/gl_rendertexture.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/driver/gl/gl_replay.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/glx_platform.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/wgl_platform.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/gl/wrappers/gl_get_funcs.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/ihv/amd/ags_wrapper.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/ihv/amd/amd_rgp.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/ihv/nv/nv_aftermath.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/ihv/nv/nvapi_hooks.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_core.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_initstate.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_layer.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_posix.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_postvs.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_replay.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/vk_shader_cache.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/wrappers/vk_device_funcs.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/wrappers/vk_get_funcs.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/driver/vulkan/wrappers/vk_misc_funcs.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/hooks/d3d11_compat_policy.h": {
+      "status": "not present in 1.48/current fork"
+    },
+    "renderdoc/hooks/hooks.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/os/os_specific.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/posix/android/android_process.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/posix/android/android_stringio.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/posix/linux/linux_process.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/posix/posix_libentry.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/os/posix/posix_network.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/posix/posix_process.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/os/posix/posix_stringio.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/win32/sys_win32_hooks.cpp": {
+      "status": "ported or superseded",
+      "changed": false
+    },
+    "renderdoc/os/win32/win32_callstack.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/os/win32/win32_process.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/renderdoc.vcxproj": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/replay/app_api.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/replay/entry_points.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    },
+    "renderdoc/replay/replay_controller.cpp": {
+      "status": "ported or superseded",
+      "changed": true
+    }
+  },
+  "shader_entries": [
+    "RENDERDOC_CheckerboardPS",
+    "RENDERDOC_CopyArrayToMS",
+    "RENDERDOC_CopyBLASInstanceCS",
+    "RENDERDOC_CopyMSToArray",
+    "RENDERDOC_CopyShaderTableCS",
+    "RENDERDOC_DebugMathOp",
+    "RENDERDOC_DebugSamplePS",
+    "RENDERDOC_DebugSampleVS",
+    "RENDERDOC_DepthCopyArrayPS",
+    "RENDERDOC_DepthCopyArrayToMS",
+    "RENDERDOC_DepthCopyMSArrayPS",
+    "RENDERDOC_DepthCopyMSPS",
+    "RENDERDOC_DepthCopyMSToArray",
+    "RENDERDOC_DepthCopyPS",
+    "RENDERDOC_DiscardFloatPS",
+    "RENDERDOC_DiscardIntPS",
+    "RENDERDOC_ExecuteIndirectPatchCS",
+    "RENDERDOC_FixedColPS",
+    "RENDERDOC_Fixed_Color",
+    "RENDERDOC_FloatCopyArrayToMS",
+    "RENDERDOC_FloatCopyMSToArray",
+    "RENDERDOC_FullscreenVS",
+    "RENDERDOC_HistogramCS",
+    "RENDERDOC_MeshGS",
+    "RENDERDOC_MeshPS",
+    "RENDERDOC_MeshPickCS",
+    "RENDERDOC_MeshVS",
+    "RENDERDOC_PatchAccStructAddressCS",
+    "RENDERDOC_PatchShaderTableCS",
+    "RENDERDOC_PixelHistoryCopyPixel",
+    "RENDERDOC_PixelHistoryFixedColPS",
+    "RENDERDOC_PixelHistoryUnused",
+    "RENDERDOC_PrepareRayIndirectExecuteCS",
+    "RENDERDOC_PrepareTLASCopyIndirectExecuteCS",
+    "RENDERDOC_PrimitiveIDPS",
+    "RENDERDOC_QOResolvePS",
+    "RENDERDOC_QuadOverdrawPS",
+    "RENDERDOC_ResultMinMaxCS",
+    "RENDERDOC_TexDisplayPS",
+    "RENDERDOC_TexDisplayVS",
+    "RENDERDOC_TexRemapFloat",
+    "RENDERDOC_TexRemapSInt",
+    "RENDERDOC_TexRemapUInt",
+    "RENDERDOC_Text9VS",
+    "RENDERDOC_TextPS",
+    "RENDERDOC_TextVS",
+    "RENDERDOC_TileMinMaxCS",
+    "RENDERDOC_TriangleSizeGS",
+    "RENDERDOC_TriangleSizePS"
+  ],
+  "preserved_contracts": [
+    {
+      "path": "renderdoc/api/app/renderdoc_app.h",
+      "literal": "\"RENDERDOC_GetAPI\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_CopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_CopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_FloatCopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_FloatCopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_FullscreenVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_PixelHistoryUnused\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_PixelHistoryCopyPixel\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DiscardFloatPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DiscardIntPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_FixedColPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_CheckerboardPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TexDisplayVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TexDisplayPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapFloat\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapUInt\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapSInt\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_QuadOverdrawPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_QOResolvePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TriangleSizeGS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TriangleSizePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyArrayPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyMSPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyMSArrayPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_MeshVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_MeshGS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_MeshPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_MeshPickCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DebugMathOp\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DebugSampleVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_DebugSamplePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_TileMinMaxCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_HistogramCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_ResultMinMaxCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_debug.cpp",
+      "literal": "\"RENDERDOC_PrimitiveIDPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertext.cpp",
+      "literal": "\"RENDERDOC_TextVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertext.cpp",
+      "literal": "\"RENDERDOC_TextPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertext.cpp",
+      "literal": "\"RENDERDOC_Text9VS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TexDim\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_YUVDownsampleRate\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_YUVAChannels\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedMip\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSliceFace\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSample\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TextureType\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMin\""
+    },
+    {
+      "path": "renderdoc/driver/d3d11/d3d11_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMax\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_MeshVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_MeshGS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_MeshPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_FullscreenVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DiscardFloatPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DiscardIntPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_CopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_FloatCopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyMSToArray\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_CopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_FloatCopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyArrayToMS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_PixelHistoryCopyPixel\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DebugMathOp\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DebugSampleVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DebugSamplePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_ExecuteIndirectPatchCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_CheckerboardPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TexDisplayVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TexDisplayPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapFloat\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapUInt\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TexRemapSInt\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TriangleSizeGS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TriangleSizePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_QuadOverdrawPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_QOResolvePS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_DepthCopyMSPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_MeshPickCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_PrimitiveIDPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_PixelHistoryFixedColPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_TileMinMaxCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_HistogramCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_debug.cpp",
+      "literal": "\"RENDERDOC_ResultMinMaxCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_PatchShaderTableCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_CopyShaderTableCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_PrepareRayIndirectExecuteCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_PrepareTLASCopyIndirectExecuteCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_CopyBLASInstanceCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_manager.cpp",
+      "literal": "\"RENDERDOC_PatchAccStructAddressCS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_overlay.cpp",
+      "literal": "\"RENDERDOC_QuadOverdrawPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertext.cpp",
+      "literal": "\"RENDERDOC_TextVS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertext.cpp",
+      "literal": "\"RENDERDOC_TextPS\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TexDim\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_YUVDownsampleRate\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_YUVAChannels\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedMip\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSliceFace\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSample\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TextureType\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMin\""
+    },
+    {
+      "path": "renderdoc/driver/d3d12/d3d12_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMax\""
+    },
+    {
+      "path": "renderdoc/driver/gl/egl_hooks.cpp",
+      "literal": "\"RENDERDOC_HOOK_EGL\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TexDim\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedMip\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSliceFace\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedSample\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_TextureType\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMin\""
+    },
+    {
+      "path": "renderdoc/driver/gl/gl_rendertexture.cpp",
+      "literal": "\"RENDERDOC_SelectedRangeMax\""
+    },
+    {
+      "path": "renderdoc/driver/ihv/nv/nvapi_hooks.cpp",
+      "literal": "\"RENDERDOC_DIAG_NVAPI_METADATA\""
+    },
+    {
+      "path": "renderdoc/hooks/hooks.cpp",
+      "literal": "\"RENDERDOC_ZZZ_D3D11_COMPAT\""
+    },
+    {
+      "path": "renderdoc/hooks/hooks.cpp",
+      "literal": "\"RENDERDOC_D3D11_COMPAT_SELFTEST\""
+    },
+    {
+      "path": "renderdoc/hooks/hooks.cpp",
+      "literal": "\"RENDERDOC_D3D11_CAPTURE_OPTOUT\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_libentry.cpp",
+      "literal": "\"RENDERDOC_CAPFILE\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_libentry.cpp",
+      "literal": "\"RENDERDOC_CAPOPTS\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_process.cpp",
+      "literal": "\"RENDERDOC_ORIGLIBPATH\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_process.cpp",
+      "literal": "\"RENDERDOC_ORIGPRELOAD\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_process.cpp",
+      "literal": "\"RENDERDOC_CAPFILE\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_process.cpp",
+      "literal": "\"RENDERDOC_CAPOPTS\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_process.cpp",
+      "literal": "\"RENDERDOC_DEBUG_LOG_FILE\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_stringio.cpp",
+      "literal": "\"RENDERDOC_TEMP\""
+    },
+    {
+      "path": "renderdoc/os/posix/posix_stringio.cpp",
+      "literal": "\"RENDERDOC_DEBUG_LOG_FILE\""
+    },
+    {
+      "path": "renderdoc/os/win32/sys_win32_hooks.cpp",
+      "literal": "\"RENDERDOC_DIAG_TRACE_EXIT\""
+    },
+    {
+      "path": "renderdoc/replay/entry_points.cpp",
+      "literal": "\"RENDERDOC_GetAPI\""
+    },
+    {
+      "path": "renderdoc/replay/entry_points.cpp",
+      "literal": "\"renderdoc.pyd\""
+    },
+    {
+      "path": "renderdoc/replay/entry_points.cpp",
+      "literal": "\"renderdoc.so\""
+    },
+    {
+      "path": "renderdoc/replay/entry_points.cpp",
+      "literal": "\"--renderdoc\""
+    },
+    {
+      "path": "renderdoc/replay/entry_points.cpp",
+      "literal": "\"--pyrenderdoc\""
+    }
+  ],
+  "patched_files": [
+    "Directory.Build.props",
+    "qrenderdoc/Windows/Dialogs/CrashDialog.cpp",
+    "qrenderdoc/Windows/Dialogs/UpdateDialog.cpp",
+    "qrenderdoc/Windows/MainWindow.cpp",
+    "qrenderdoc/qrenderdoc_local.vcxproj",
+    "qrenderdoc/renderdocui_stub.cpp",
+    "qrenderdoc/renderdocui_stub.vcxproj",
+    "renderdoc/android/android.cpp",
+    "renderdoc/android/android_utils.cpp",
+    "renderdoc/android/jdwp.cpp",
+    "renderdoc/api/replay/renderdoc_tostr.inl",
+    "renderdoc/api/replay/version.h",
+    "renderdoc/common/globalconfig.h",
+    "renderdoc/core/core.cpp",
+    "renderdoc/core/crash_handler.h",
+    "renderdoc/core/remote_server.cpp",
+    "renderdoc/core/settings.cpp",
+    "renderdoc/data/glsl/fixedcol.frag",
+    "renderdoc/data/hlsl/d3d12_pixelhistory.hlsl",
+    "renderdoc/data/hlsl/depth_copy.hlsl",
+    "renderdoc/data/hlsl/histogram.hlsl",
+    "renderdoc/data/hlsl/mesh.hlsl",
+    "renderdoc/data/hlsl/misc.hlsl",
+    "renderdoc/data/hlsl/multisample.hlsl",
+    "renderdoc/data/hlsl/pixelhistory.hlsl",
+    "renderdoc/data/hlsl/quadoverdraw.hlsl",
+    "renderdoc/data/hlsl/raytracing.hlsl",
+    "renderdoc/data/hlsl/shaderdebug.hlsl",
+    "renderdoc/data/hlsl/texdisplay.hlsl",
+    "renderdoc/data/hlsl/texremap.hlsl",
+    "renderdoc/data/hlsl/text.hlsl",
+    "renderdoc/driver/d3d11/d3d11_context_wrap.cpp",
+    "renderdoc/driver/d3d11/d3d11_debug.cpp",
+    "renderdoc/driver/d3d11/d3d11_device.cpp",
+    "renderdoc/driver/d3d11/d3d11_rendertext.cpp",
+    "renderdoc/driver/d3d11/d3d11_replay.cpp",
+    "renderdoc/driver/d3d12/d3d12_debug.cpp",
+    "renderdoc/driver/d3d12/d3d12_device.cpp",
+    "renderdoc/driver/d3d12/d3d12_device_wrap.cpp",
+    "renderdoc/driver/d3d12/d3d12_manager.cpp",
+    "renderdoc/driver/d3d12/d3d12_overlay.cpp",
+    "renderdoc/driver/d3d12/d3d12_rendertext.cpp",
+    "renderdoc/driver/d3d12/d3d12_replay.cpp",
+    "renderdoc/driver/d3d12/d3d12_sdk_select.cpp",
+    "renderdoc/driver/d3d12/d3d12_shader_cache.cpp",
+    "renderdoc/driver/dxgi/dxgi_hooks.cpp",
+    "renderdoc/driver/gl/egl_hooks.cpp",
+    "renderdoc/driver/gl/gl_common.cpp",
+    "renderdoc/driver/gl/gl_driver.cpp",
+    "renderdoc/driver/gl/gl_overlay.cpp",
+    "renderdoc/driver/gl/gl_replay.cpp",
+    "renderdoc/driver/gl/glx_platform.cpp",
+    "renderdoc/driver/gl/wgl_platform.cpp",
+    "renderdoc/driver/gl/wrappers/gl_get_funcs.cpp",
+    "renderdoc/driver/ihv/amd/ags_wrapper.cpp",
+    "renderdoc/driver/ihv/amd/amd_rgp.cpp",
+    "renderdoc/driver/ihv/nv/nv_aftermath.cpp",
+    "renderdoc/driver/ihv/nv/nvapi_hooks.cpp",
+    "renderdoc/driver/vulkan/vk_core.cpp",
+    "renderdoc/driver/vulkan/vk_initstate.cpp",
+    "renderdoc/driver/vulkan/vk_layer.cpp",
+    "renderdoc/driver/vulkan/vk_posix.cpp",
+    "renderdoc/driver/vulkan/vk_postvs.cpp",
+    "renderdoc/driver/vulkan/vk_replay.cpp",
+    "renderdoc/driver/vulkan/vk_shader_cache.cpp",
+    "renderdoc/driver/vulkan/wrappers/vk_device_funcs.cpp",
+    "renderdoc/driver/vulkan/wrappers/vk_get_funcs.cpp",
+    "renderdoc/driver/vulkan/wrappers/vk_misc_funcs.cpp",
+    "renderdoc/os/os_specific.cpp",
+    "renderdoc/os/posix/android/android_process.cpp",
+    "renderdoc/os/posix/android/android_stringio.cpp",
+    "renderdoc/os/posix/linux/linux_process.cpp",
+    "renderdoc/os/posix/posix_libentry.cpp",
+    "renderdoc/os/posix/posix_network.cpp",
+    "renderdoc/os/posix/posix_stringio.cpp",
+    "renderdoc/os/win32/sys_win32_hooks.cpp",
+    "renderdoc/os/win32/win32_callstack.cpp",
+    "renderdoc/os/win32/win32_libentry.cpp",
+    "renderdoc/os/win32/win32_process.cpp",
+    "renderdoc/os/win32/win32_stringio.cpp",
+    "renderdoc/renderdoc.vcxproj",
+    "renderdoc/replay/app_api.cpp",
+    "renderdoc/replay/entry_points.cpp",
+    "renderdoc/replay/replay_controller.cpp",
+    "renderdoccmd/renderdoccmd.vcxproj",
+    "renderdoccmd/renderdoccmd_win32.cpp",
+    "renderdocshim/renderdocshim.h",
+    "renderdocshim/renderdocshim.vcxproj"
+  ],
+  "notes": [
+    "Windows-only compatibility build; Android/POSIX literals ported where sources exist, but platform packages are not delivered.",
+    "Public C ABI, Python modules, manual RENDERDOC_* environment variables, RDC section names and license headers retained.",
+    "Reference-only compatibility policy and NVAPI extensions are not introduced.",
+    "No stage-2 hook changes in this patch."
+  ]
+}
