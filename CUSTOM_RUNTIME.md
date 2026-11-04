@@ -10,9 +10,36 @@
 
 实际 GUI 启动已逐一确认：原神、星穹铁道、绝区零连接成功并显示 **D3D11 (Active)**；
 Returnal 选择根目录 `Returnal.exe`，其余字段留空，自动解析 Shipping EXE 并连接 **D3D12 (Active)**。
-三个米哈游游戏本轮的登录后场景截帧和独立回放仍待用户完成协议／登录后分别验收，
-不能用旧原神证据或一个游戏的结果代替。Returnal 本轮已通过场景、人物和 HUD 的
-独立进程回放；完整回放仍以关闭 DLSS 为条件，自动策略不修改游戏配置或存档。
+原神和绝区零本轮已完成场景、人物和 HUD 的独立进程回放；星穹铁道由用户关闭 DLSS 后
+人工验证通过，下面单列证据来源和限制。Returnal 本轮也已通过场景、人物和 HUD 的
+独立进程回放；完整回放仍以关闭 DLSS 为条件。星穹铁道截帧前也需关闭 DLSS，
+自动策略不修改这些游戏设置或存档。
+
+三个米哈游游戏均从同一个直接打开、无 `.cap` 启动参数的 GUI 选择 EXE 并 Launch，
+保持 Automatic detection、空手动环境变量和空命令行；自动设置随目标切换，未依赖 CMD。
+
+* 原神：第 28585 帧保存于 `E:\RenderDocProject\captures\YuanShen_GUI_auto_scene_frame28585.rdc`，
+  SHA256 `2B8B25CEC76A0970F646F1C228227BADBFA4830A51C84C3045144E479B4A7872`。
+  游戏退出后独立进程 PID 31300 加载，1024 个动作、877 次绘制／派发、461 个纹理和
+  792 个缓冲区，清单导出无错误。最终 Present EID 12828 已检查人物、NPC、场景、任务、
+  小地图、队伍、血条及技能 HUD；图片为 `work/mihoyo-gui-20261104/genshin-independent-final.png`。
+* 星穹铁道：第 5096 帧的 RDC 已保存，独立回放发现 HUD 正常、三维场景黑色。
+  对该帧资源链检查发现，场景颜色目标 2765 仍有人物和环境，而后处理输入 2795
+  在记录的事件中只有 Discard/Clear，随后被 EID 4980 读取，未记录对应颜色生成工作。
+  不能仅凭此确认 DLSS 内部调用的具体缺失机制。2026-11-04 用户关闭 DLSS 后反馈人工验证通过；
+  工具未另存关闭后的 RDC，不能将失败的第 5096 帧或其他游戏的结果标成该条件的通过证据。
+* 绝区零：本轮 GUI 启动的 PID 64664 会话生成第 3986 帧，工具观察到捕获完成，未执行或记录
+  触发动作，随后另存为
+  `E:\RenderDocProject\captures\ZenlessZoneZero_GUI_auto_scene_frame3986.rdc`，941430959 字节，
+  SHA256 `3CC82C4216DC0B65C3391B71B356CD431AFD77C611CB8DD789DD92A90C21F7A3`。
+  游戏正常退出后，独立 qrenderdoc PID 33800 重新打开该文件，960 个动作、883 次绘制／派发、
+  438 个纹理和 1017 个缓冲区，清单导出无错误。最终 Present EID 10579（资源 7632）
+  已检查两个人物、室内环境、任务提示、交互距离和快捷键 HUD；图片为
+  `work/mihoyo-gui-20261104/zzz-independent-final.png`。未修改绝区零图像设置，
+  这次结果只覆盖该室内场景，不代表其他超分选项或战斗场景均已验证。
+
+上述 RDC、图片、清单和本机验收 JSON 留在 `E:\RenderDocProject\captures` 与
+`E:\RenderDocProject\work\mihoyo-gui-20261104`，大型捕获及含账号标识的图片不入库。
 
 Returnal 验收从 GUI 选择根目录 EXE，并用 Queue Capture 在第 5000 帧捕获。
 为保留用户原配置，测试手动传入已有隔离配置目录的 `-UserDir=... -windowed` 参数，
