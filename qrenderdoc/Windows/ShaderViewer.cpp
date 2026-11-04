@@ -53,7 +53,7 @@
 
 bool ValidationShaderVariable(const ShaderVariable &var)
 {
-  // A Stuct or array
+  // A Struct or array
   if(var.members.size() != 0)
   {
     if(var.type != VarType::Struct && var.type != VarType::Unknown &&
@@ -527,6 +527,8 @@ void ShaderViewer::cacheResources()
 {
   m_ReadOnlyResources = m_Ctx.CurPipelineState().GetReadOnlyResources(m_Stage, false);
   m_ReadWriteResources = m_Ctx.CurPipelineState().GetReadWriteResources(m_Stage, false);
+  m_Samplers = m_Ctx.CurPipelineState().GetSamplers(m_Stage, false);
+  m_Constants = m_Ctx.CurPipelineState().GetConstantBlocks(m_Stage, false);
 }
 
 void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeline,
@@ -1094,7 +1096,7 @@ void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeli
 
         // we do updateDebugging() again because the first call finds the scintilla for the current
         // source file, the second time jumps to it.
-        if(preferSourceDebug)
+        if(preferSourceDebug && !m_States.empty())
         {
           // if we're not on a source line, move forward to the first source line
           while(!m_CurInstructionScintilla)
@@ -2501,7 +2503,7 @@ bool ShaderViewer::IsFirstState() const
 
 bool ShaderViewer::IsLastState() const
 {
-  return m_CurrentStateIdx == m_States.size() - 1;
+  return m_CurrentStateIdx == m_States.size() - 1 || m_States.empty();
 }
 
 const ShaderDebugState &ShaderViewer::GetPreviousState() const
@@ -2725,10 +2727,10 @@ void ShaderViewer::applyBackwardsChange()
       if(c.after.name.empty())
       {
         if((c.before.type == VarType::ReadOnlyResource) ||
-           (c.before.type == VarType::ReadWriteResource))
+           (c.before.type == VarType::ReadWriteResource) || (c.before.type == VarType::ConstantBlock))
           check = false;
         if((c.after.type == VarType::ReadOnlyResource) ||
-           (c.after.type == VarType::ReadWriteResource))
+           (c.after.type == VarType::ReadWriteResource) || (c.after.type == VarType::ConstantBlock))
           check = false;
       }
       if(check)
@@ -2828,10 +2830,10 @@ void ShaderViewer::applyForwardsChange()
       if(c.before.name.empty())
       {
         if((c.before.type == VarType::ReadOnlyResource) ||
-           (c.before.type == VarType::ReadWriteResource))
+           (c.before.type == VarType::ReadWriteResource) || (c.before.type == VarType::ConstantBlock))
           check = false;
         if((c.after.type == VarType::ReadOnlyResource) ||
-           (c.after.type == VarType::ReadWriteResource))
+           (c.after.type == VarType::ReadWriteResource) || (c.after.type == VarType::ConstantBlock))
           check = false;
       }
 
@@ -2914,17 +2916,38 @@ QString ShaderViewer::stringRep(const ShaderVariable &var, uint32_t row)
   if(type == VarType::Unknown)
     type = ui->intView->isChecked() ? VarType::SInt : VarType::Float;
 
+  if(type == VarType::ConstantBlock)
+  {
+    rdcarray<UsedDescriptor> &resList = m_Constants;
+    int32_t bindIdx = -1;
+    if(var.IsDirectAccess())
+    {
+      ShaderDirectAccess access = var.GetDirectAccess();
+      bindIdx = resList.indexOf(access);
+    }
+    else
+    {
+      ShaderBindIndex varBind = var.GetBindIndex();
+      bindIdx = resList.indexOf(varBind);
+    }
+    if(bindIdx >= 0)
+    {
+      const UsedDescriptor &res = resList[bindIdx];
+      return ToQStr(res.descriptor.resource);
+    }
+  }
+
   if(type == VarType::ReadOnlyResource || type == VarType::ReadWriteResource ||
      type == VarType::Sampler)
   {
-    rdcarray<UsedDescriptor> resList;
+    const rdcarray<UsedDescriptor> *pResList = &m_Samplers;
 
     if(type == VarType::ReadOnlyResource)
-      resList = m_ReadOnlyResources;
+      pResList = &m_ReadOnlyResources;
     else if(type == VarType::ReadWriteResource)
-      resList = m_ReadWriteResources;
-    else if(type == VarType::Sampler)
-      resList = m_Ctx.CurPipelineState().GetSamplers(m_Stage);
+      pResList = &m_ReadWriteResources;
+
+    const rdcarray<UsedDescriptor> &resList = *pResList;
 
     ShaderBindIndex varBind;
     int32_t bindIdx = -1;
@@ -3244,8 +3267,8 @@ QString ShaderViewer::getRegNames(const RDTreeWidgetItem *item, uint32_t swizzle
     return ret;
   }
 
-  if(mapping.type == VarType::Sampler || mapping.type == VarType::ReadOnlyResource ||
-     mapping.type == VarType::ReadWriteResource)
+  if(mapping.type == VarType::ConstantBlock || mapping.type == VarType::Sampler ||
+     mapping.type == VarType::ReadOnlyResource || mapping.type == VarType::ReadWriteResource)
   {
     const ShaderVariable *reg = GetDebugVariable(mapping.variables[0]);
 
@@ -3255,35 +3278,28 @@ QString ShaderViewer::getRegNames(const RDTreeWidgetItem *item, uint32_t swizzle
 
     ret = reg->name;
 
-    if(mapping.type == VarType::Sampler)
-    {
-      if(!reg->IsDirectAccess())
-      {
-        ShaderBindIndex bind = reg->GetBindIndex();
+    ShaderBindIndex bind = reg->GetBindIndex();
 
+    if(!reg->IsDirectAccess())
+    {
+      if(mapping.type == VarType::ConstantBlock)
+      {
+        if(bind.category != DescriptorCategory::ConstantBlock)
+          return QString();
+
+        if(bind.index >= m_ShaderDetails->constantBlocks.size())
+          return QString();
+      }
+      else if(mapping.type == VarType::Sampler)
+      {
         if(bind.category != DescriptorCategory::Sampler)
           return QString();
 
         if(bind.index >= m_ShaderDetails->samplers.size())
           return QString();
-
-        const ShaderSampler &samp = m_ShaderDetails->samplers[bind.index];
-
-        if(samp.bindArraySize == ~0U)
-          return ret + lit("[unbounded]");
-
-        if(samp.bindArraySize > 1 && child != ~0U)
-          return QFormatStr("%1[%2]").arg(ret).arg(child);
       }
-
-      return ret;
-    }
-    else if(mapping.type == VarType::ReadOnlyResource || mapping.type == VarType::ReadWriteResource)
-    {
-      if(!reg->IsDirectAccess())
+      else if(mapping.type == VarType::ReadOnlyResource || mapping.type == VarType::ReadWriteResource)
       {
-        ShaderBindIndex bind = reg->GetBindIndex();
-
         if((mapping.type == VarType::ReadOnlyResource &&
             bind.category != DescriptorCategory::ReadOnlyResource) ||
            (mapping.type == VarType::ReadWriteResource &&
@@ -3295,21 +3311,16 @@ QString ShaderViewer::getRegNames(const RDTreeWidgetItem *item, uint32_t swizzle
            (mapping.type == VarType::ReadWriteResource &&
             bind.index >= m_ShaderDetails->readWriteResources.size()))
           return QString();
-
-        const ShaderResource &res = mapping.type == VarType::ReadOnlyResource
-                                        ? m_ShaderDetails->readOnlyResources[bind.index]
-                                        : m_ShaderDetails->readWriteResources[bind.index];
-
-        if(res.bindArraySize == ~0U)
-          return ret + lit("[unbounded]");
-
-        if(res.bindArraySize > 1 && child != ~0U)
-          return QFormatStr("%1[%2]").arg(ret).arg(child);
       }
 
-      return ret;
-    }
+      uint32_t arrayIdx =
+          child < (uint32_t)item->childCount() ? item->child(child)->tag().value<uint32_t>() : child;
+      if(arrayIdx == ~0U)
+        arrayIdx = child;
 
+      if(arrayIdx != ~0U)
+        return QFormatStr("%1[%2]").arg(ret).arg(arrayIdx);
+    }
     return ret;
   }
 
@@ -4126,23 +4137,55 @@ void ShaderViewer::updateDebugState()
     // sure we add any remainders here. Constants might be un-touched by reflection info
     for(int i = 0; i < m_Trace->constantBlocks.count(); i++)
     {
-      rdcstr name = m_Trace->constantBlocks[i].name;
+      const ShaderVariable &cb = m_Trace->constantBlocks[i];
+      const rdcstr &name = cb.name;
       if(varsMapped.contains(name))
         continue;
+
+      ShaderBindIndex bind = cb.GetBindIndex();
+      const ConstantBlock &res = m_ShaderDetails->constantBlocks[bind.index];
+
+      if(res.bindArraySize == ~0U)
+      {
+        RDTreeWidgetItem *node =
+            new RDTreeWidgetItem({res.name, name, lit("[unbounded]"), QString()});
+        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, name)));
+        ui->constants->addTopLevelItem(node);
+        continue;
+      }
+
+      // Special case for arrays of constant blocks which might be of the form <reg>[0], <reg>[1]
+      size_t toFind = cb.members.size();
+      if(toFind > 0)
+      {
+        for(uint32_t j = 0; j < cb.members.size(); ++j)
+        {
+          if(!cb.members[i].name.isEmpty())
+          {
+            if(cb.members[j].name[0] == '[')
+            {
+              rdcstr childname = name + cb.members[j].name;
+              if(varsMapped.contains(childname))
+                --toFind;
+            }
+          }
+        }
+        if(toFind == 0)
+          continue;
+      }
 
       RDTreeWidgetItem *node = new RDTreeWidgetItem({name, name, lit("Constant"), QString()});
       node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, name)));
 
-      for(int j = 0; j < m_Trace->constantBlocks[i].members.count(); j++)
+      for(int j = 0; j < cb.members.count(); j++)
       {
-        if(m_Trace->constantBlocks[i].members[j].rows > 0 ||
-           m_Trace->constantBlocks[i].members[j].columns > 0)
+        if(cb.members[j].rows > 0 || cb.members[j].columns > 0)
         {
-          rdcstr childname = name + "." + m_Trace->constantBlocks[i].members[j].name;
+          rdcstr childname = name + "." + cb.members[j].name;
           if(!varsMapped.contains(name))
           {
-            RDTreeWidgetItem *child = new RDTreeWidgetItem(
-                {name, name, lit("Constant"), stringRep(m_Trace->constantBlocks[i].members[j])});
+            RDTreeWidgetItem *child =
+                new RDTreeWidgetItem({name, name, lit("Constant"), stringRep(cb.members[j])});
             child->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, childname)));
             node->addChild(child);
           }
@@ -4150,16 +4193,14 @@ void ShaderViewer::updateDebugState()
         else
         {
           // Check if this is a constant buffer array
-          int arrayCount = m_Trace->constantBlocks[i].members[j].members.count();
+          int arrayCount = cb.members[j].members.count();
           for(int k = 0; k < arrayCount; k++)
           {
-            if(m_Trace->constantBlocks[i].members[j].members[k].rows > 0 ||
-               m_Trace->constantBlocks[i].members[j].members[k].columns > 0)
+            if(cb.members[j].members[k].rows > 0 || cb.members[j].members[k].columns > 0)
             {
-              rdcstr childname = name + "." + m_Trace->constantBlocks[i].members[j].members[k].name;
-              RDTreeWidgetItem *child =
-                  new RDTreeWidgetItem({name, name, lit("Constant"),
-                                        stringRep(m_Trace->constantBlocks[i].members[j].members[k])});
+              rdcstr childname = name + "." + cb.members[j].members[k].name;
+              RDTreeWidgetItem *child = new RDTreeWidgetItem(
+                  {name, name, lit("Constant"), stringRep(cb.members[j].members[k])});
               node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, childname)));
 
               node->addChild(child);
@@ -4194,6 +4235,74 @@ void ShaderViewer::updateDebugState()
       }
     }
 
+    const rdcarray<UsedDescriptor> &cbBinds = m_Constants;
+
+    for(int i = 0; i < m_Trace->constantBlocks.count(); i++)
+    {
+      const ShaderVariable &cb = m_Trace->constantBlocks[i];
+
+      if(varsMapped.contains(cb.name))
+        continue;
+
+      if(cb.IsDirectAccess())
+        continue;
+
+      // find all descriptors in this bind's array
+      ShaderBindIndex bind = cb.GetBindIndex();
+      bind.arrayElement = 0;
+
+      rdcarray<UsedDescriptor> descriptors;
+      for(const UsedDescriptor &a : cbBinds)
+        if(CategoryForDescriptorType(a.access.type) == bind.category && a.access.index == bind.index)
+          descriptors.push_back(a);
+
+      if(descriptors.empty())
+        continue;
+
+      const ConstantBlock &res = m_ShaderDetails->constantBlocks[bind.index];
+
+      if(res.bindArraySize == 1)
+      {
+        RDTreeWidgetItem *node = new RDTreeWidgetItem(
+            {res.name, cb.name, lit("Constant"), ToQStr(descriptors[0].descriptor.resource)});
+        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadOnlyResource, cb.name)));
+        ui->constants->addTopLevelItem(node);
+      }
+      else
+      {
+        QString sizeName;
+        uint32_t count;
+        if(res.bindArraySize == ~0U)
+        {
+          sizeName = lit("[unbounded]");
+          count = (uint32_t)descriptors.size();
+        }
+        else
+        {
+          sizeName = QFormatStr("[%1]").arg(res.bindArraySize);
+          count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
+        }
+        RDTreeWidgetItem *node = new RDTreeWidgetItem({res.name, cb.name, sizeName, QString()});
+        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, cb.name)));
+
+        for(uint32_t a = 0; a < count; a++)
+        {
+          uint32_t arrayIndex = descriptors[a].access.arrayElement;
+          QString childName = QFormatStr("%1[%2]").arg(cb.name).arg(arrayIndex);
+          RDTreeWidgetItem *child = new RDTreeWidgetItem({
+              QFormatStr("%1[%2]").arg(res.name).arg(a),
+              childName,
+              lit("Constant"),
+              ToQStr(descriptors[a].descriptor.resource),
+          });
+          child->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Constant, childName)));
+          node->addChild(child);
+        }
+
+        ui->constants->addTopLevelItem(node);
+      }
+    }
+
     rdcarray<UsedDescriptor> &roBinds = m_ReadOnlyResources;
 
     for(int i = 0; i < m_Trace->readOnlyResources.count(); i++)
@@ -4206,14 +4315,12 @@ void ShaderViewer::updateDebugState()
       if(ro.IsDirectAccess())
         continue;
 
-      const rdcarray<UsedDescriptor> &resList = m_ReadOnlyResources;
-
       // find all descriptors in this bind's array
       ShaderBindIndex bind = ro.GetBindIndex();
       bind.arrayElement = 0;
 
       rdcarray<UsedDescriptor> descriptors;
-      for(const UsedDescriptor &a : resList)
+      for(const UsedDescriptor &a : roBinds)
         if(CategoryForDescriptorType(a.access.type) == bind.category && a.access.index == bind.index)
           descriptors.push_back(a);
 
@@ -4229,23 +4336,27 @@ void ShaderViewer::updateDebugState()
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadOnlyResource, ro.name)));
         ui->constants->addTopLevelItem(node);
       }
-      else if(res.bindArraySize == ~0U)
-      {
-        RDTreeWidgetItem *node =
-            new RDTreeWidgetItem({res.name, ro.name, lit("[unbounded]"), QString()});
-        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadOnlyResource, ro.name)));
-        ui->constants->addTopLevelItem(node);
-      }
       else
       {
-        RDTreeWidgetItem *node = new RDTreeWidgetItem(
-            {res.name, ro.name, QFormatStr("[%1]").arg(res.bindArraySize), QString()});
+        QString sizeName;
+        uint32_t count;
+        if(res.bindArraySize == ~0U)
+        {
+          sizeName = lit("[unbounded]");
+          count = (uint32_t)descriptors.size();
+        }
+        else
+        {
+          sizeName = QFormatStr("[%1]").arg(res.bindArraySize);
+          count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
+        }
+        RDTreeWidgetItem *node = new RDTreeWidgetItem({res.name, ro.name, sizeName, QString()});
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadOnlyResource, ro.name)));
 
-        uint32_t count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
         for(uint32_t a = 0; a < count; a++)
         {
-          QString childName = QFormatStr("%1[%2]").arg(ro.name).arg(a);
+          uint32_t arrayIndex = descriptors[a].access.arrayElement;
+          QString childName = QFormatStr("%1[%2]").arg(ro.name).arg(arrayIndex);
           RDTreeWidgetItem *child = new RDTreeWidgetItem({
               QFormatStr("%1[%2]").arg(res.name).arg(a),
               childName,
@@ -4273,14 +4384,12 @@ void ShaderViewer::updateDebugState()
       if(rw.IsDirectAccess())
         continue;
 
-      const rdcarray<UsedDescriptor> &resList = m_ReadWriteResources;
-
       // find all descriptors in this bind's array
       ShaderBindIndex bind = rw.GetBindIndex();
       bind.arrayElement = 0;
 
       rdcarray<UsedDescriptor> descriptors;
-      for(const UsedDescriptor &a : resList)
+      for(const UsedDescriptor &a : rwBinds)
         if(CategoryForDescriptorType(a.access.type) == bind.category && a.access.index == bind.index)
           descriptors.push_back(a);
 
@@ -4296,23 +4405,26 @@ void ShaderViewer::updateDebugState()
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadWriteResource, rw.name)));
         ui->constants->addTopLevelItem(node);
       }
-      else if(res.bindArraySize == ~0U)
-      {
-        RDTreeWidgetItem *node =
-            new RDTreeWidgetItem({res.name, rw.name, lit("[unbounded]"), QString()});
-        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadWriteResource, rw.name)));
-        ui->constants->addTopLevelItem(node);
-      }
       else
       {
-        RDTreeWidgetItem *node = new RDTreeWidgetItem(
-            {res.name, rw.name, QFormatStr("[%1]").arg(res.bindArraySize), QString()});
+        QString sizeName;
+        uint32_t count;
+        if(res.bindArraySize == ~0U)
+        {
+          sizeName = lit("[unbounded]");
+          count = (uint32_t)descriptors.size();
+        }
+        else
+        {
+          sizeName = QFormatStr("[%1]").arg(res.bindArraySize);
+          count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
+        }
+        RDTreeWidgetItem *node = new RDTreeWidgetItem({res.name, rw.name, sizeName, QString()});
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::ReadWriteResource, rw.name)));
-
-        uint32_t count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
         for(uint32_t a = 0; a < count; a++)
         {
-          QString childName = QFormatStr("%1[%2]").arg(rw.name).arg(a);
+          uint32_t arrayIndex = descriptors[a].access.arrayElement;
+          QString childName = QFormatStr("%1[%2]").arg(rw.name).arg(arrayIndex);
           RDTreeWidgetItem *child = new RDTreeWidgetItem({
               QFormatStr("%1[%2]").arg(res.name).arg(a),
               childName,
@@ -4328,7 +4440,7 @@ void ShaderViewer::updateDebugState()
       }
     }
 
-    rdcarray<UsedDescriptor> samplers = m_Ctx.CurPipelineState().GetSamplers(m_Stage);
+    const rdcarray<UsedDescriptor> &samplers = m_Samplers;
 
     for(int i = 0; i < m_Trace->samplers.count(); i++)
     {
@@ -4362,23 +4474,28 @@ void ShaderViewer::updateDebugState()
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Sampler, s.name)));
         ui->constants->addTopLevelItem(node);
       }
-      else if(samp.bindArraySize == ~0U)
-      {
-        RDTreeWidgetItem *node =
-            new RDTreeWidgetItem({samp.name, s.name, lit("[unbounded]"), QString()});
-        node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Sampler, s.name)));
-        ui->constants->addTopLevelItem(node);
-      }
       else
       {
-        RDTreeWidgetItem *node = new RDTreeWidgetItem(
-            {samp.name, s.name, QFormatStr("[%1]").arg(samp.bindArraySize), QString()});
+        QString sizeName;
+        uint32_t count;
+        if(samp.bindArraySize == ~0U)
+        {
+          sizeName = lit("[unbounded]");
+          count = (uint32_t)descriptors.size();
+        }
+        else
+        {
+          sizeName = QFormatStr("[%1]").arg(samp.bindArraySize);
+          count = qMin(samp.bindArraySize, (uint32_t)descriptors.size());
+        }
+
+        RDTreeWidgetItem *node = new RDTreeWidgetItem({samp.name, s.name, sizeName, QString()});
         node->setTag(QVariant::fromValue(VariableTag(DebugVariableType::Sampler, s.name)));
 
-        uint32_t count = qMin(samp.bindArraySize, (uint32_t)descriptors.size());
         for(uint32_t a = 0; a < count; a++)
         {
-          QString childName = QFormatStr("%1[%2]").arg(s.name).arg(a);
+          uint32_t arrayIndex = descriptors[a].access.arrayElement;
+          QString childName = QFormatStr("%1[%2]").arg(s.name).arg(arrayIndex);
           RDTreeWidgetItem *child = new RDTreeWidgetItem({
               QFormatStr("%1[%2]").arg(m_ShaderDetails->samplers[i].name).arg(a),
               childName,
@@ -4994,6 +5111,7 @@ RDTreeWidgetItem *ShaderViewer::makeSourceVariableNode(const SourceVariableMappi
 
     for(size_t i = 0; i < l.variables.size(); i++)
     {
+      bool processed = false;
       const DebugVariableReference &r = l.variables[i];
 
       baseTag.modified |= HasChanged(r.name);
@@ -5013,50 +5131,67 @@ RDTreeWidgetItem *ShaderViewer::makeSourceVariableNode(const SourceVariableMappi
         if(reg == NULL)
           continue;
 
-        typeName = lit("Sampler");
-
-        rdcarray<UsedDescriptor> samplers = m_Ctx.CurPipelineState().GetSamplers(m_Stage);
-
         if(reg->IsDirectAccess())
           continue;
 
-        ShaderBindIndex bind = reg->GetBindIndex();
-        int32_t bindIdx = samplers.indexOf(bind);
+        typeName = lit("Sampler");
 
-        if(bindIdx < 0)
+        const rdcarray<UsedDescriptor> &samplers = m_Samplers;
+
+        ShaderBindIndex bind = reg->GetBindIndex();
+
+        rdcarray<UsedDescriptor> descriptors;
+        for(const UsedDescriptor &a : samplers)
+          if(CategoryForDescriptorType(a.access.type) == bind.category && a.access.index == bind.index)
+            descriptors.push_back(a);
+
+        if(descriptors.empty())
         {
           value = ToQStr(ResourceId());
         }
         else
         {
-          Descriptor desc = samplers[bindIdx].descriptor;
           const ShaderSampler &samp = m_ShaderDetails->samplers[bind.index];
 
           if(samp.bindArraySize == 1)
           {
-            value = samplerRep(samp, ~0U, desc.resource);
-          }
-          else if(samp.bindArraySize == ~0U)
-          {
-            typeName = lit("[unbounded]");
-            value = QString();
+            value = samplerRep(samp, ~0U, descriptors[0].descriptor.resource);
           }
           else
           {
-            for(uint32_t a = 0; a < samp.bindArraySize; a++)
-              children.push_back(new RDTreeWidgetItem({
-                  QFormatStr("%1[%2]").arg(localName).arg(a),
+            QString childTypeName = typeName;
+            uint32_t count;
+            if(samp.bindArraySize == ~0U)
+            {
+              typeName = lit("[unbounded]");
+              count = (uint32_t)descriptors.size();
+            }
+            else
+            {
+              typeName = QFormatStr("[%1]").arg(samp.bindArraySize);
+              count = qMin(samp.bindArraySize, (uint32_t)descriptors.size());
+            }
+
+            for(uint32_t a = 0; a < count; a++)
+            {
+              uint32_t arrayIndex = descriptors[a].access.arrayElement;
+              QString childName = QFormatStr("%1[%2]").arg(localName).arg(arrayIndex);
+              RDTreeWidgetItem *child = new RDTreeWidgetItem({
+                  childName,
                   QString(),
-                  typeName,
-                  samplerRep(samp, a, desc.resource),
-              }));
+                  childTypeName,
+                  samplerRep(samp, arrayIndex, descriptors[a].descriptor.resource),
+              });
+              child->setTag(QVariant::fromValue(arrayIndex));
+              children.push_back(child);
+            }
 
-            childCount += samp.bindArraySize;
+            childCount += count;
 
-            typeName = QFormatStr("[%1]").arg(samp.bindArraySize);
             value = QString();
           }
         }
+        processed = true;
       }
       else if(r.type == DebugVariableType::ReadOnlyResource ||
               r.type == DebugVariableType::ReadWriteResource)
@@ -5099,30 +5234,112 @@ RDTreeWidgetItem *ShaderViewer::makeSourceVariableNode(const SourceVariableMappi
           {
             value = ToQStr(descriptors[0].descriptor.resource);
           }
-          else if(res.bindArraySize == ~0U)
+          else
           {
-            typeName = lit("[unbounded]");
+            QString childTypeName = typeName;
+            uint32_t count;
+            if(res.bindArraySize == ~0U)
+            {
+              typeName = lit("[unbounded]");
+              count = (uint32_t)descriptors.size();
+            }
+            else
+            {
+              typeName = QFormatStr("[%1]").arg(res.bindArraySize);
+              count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
+            }
+
+            for(uint32_t a = 0; a < count; a++)
+            {
+              uint32_t arrayIndex = descriptors[a].access.arrayElement;
+              QString childName = QFormatStr("%1[%2]").arg(localName).arg(arrayIndex);
+              RDTreeWidgetItem *child = new RDTreeWidgetItem({
+                  childName,
+                  QString(),
+                  childTypeName,
+                  ToQStr(descriptors[a].descriptor.resource),
+              });
+              child->setTag(QVariant::fromValue(arrayIndex));
+              children.push_back(child);
+            }
+
+            childCount += count;
+
             value = QString();
+          }
+        }
+        processed = true;
+      }
+      else if(r.type == DebugVariableType::Constant)
+      {
+        const ShaderVariable *reg = GetDebugVariable(r);
+        if(reg == NULL)
+          continue;
+
+        if(reg->IsDirectAccess())
+          continue;
+
+        typeName = lit("Constant");
+
+        const rdcarray<UsedDescriptor> &cbBinds = m_Constants;
+
+        // find all descriptors in this bind's array
+        ShaderBindIndex bind = reg->GetBindIndex();
+        bind.arrayElement = 0;
+
+        rdcarray<UsedDescriptor> descriptors;
+        for(const UsedDescriptor &a : cbBinds)
+          if(CategoryForDescriptorType(a.access.type) == bind.category && a.access.index == bind.index)
+            descriptors.push_back(a);
+
+        if(descriptors.empty())
+        {
+          processed = false;
+        }
+        else
+        {
+          processed = true;
+          const ConstantBlock &cb = m_ShaderDetails->constantBlocks[bind.index];
+          if(cb.bindArraySize == 1)
+          {
+            value = ToQStr(descriptors[0].descriptor.resource);
           }
           else
           {
-            uint32_t count = qMin(res.bindArraySize, (uint32_t)descriptors.size());
+            QString childTypeName = typeName;
+            uint32_t count;
+            if(cb.bindArraySize == ~0U)
+            {
+              typeName = lit("[unbounded]");
+              count = (uint32_t)descriptors.size();
+            }
+            else
+            {
+              typeName = QFormatStr("[%1]").arg(cb.bindArraySize);
+              count = qMin(cb.bindArraySize, (uint32_t)descriptors.size());
+            }
+
             for(uint32_t a = 0; a < count; a++)
-              children.push_back(new RDTreeWidgetItem({
-                  QFormatStr("%1[%2]").arg(localName).arg(a),
+            {
+              uint32_t arrayIndex = descriptors[a].access.arrayElement;
+              QString childName = QFormatStr("%1[%2]").arg(localName).arg(arrayIndex);
+              RDTreeWidgetItem *child = new RDTreeWidgetItem({
+                  childName,
                   QString(),
-                  typeName,
+                  childTypeName,
                   ToQStr(descriptors[a].descriptor.resource),
-              }));
+              });
+              child->setTag(QVariant::fromValue(arrayIndex));
+              children.push_back(child);
+            }
 
-            childCount += res.bindArraySize;
+            childCount += count;
 
-            typeName = QFormatStr("[%1]").arg(res.bindArraySize);
             value = QString();
           }
         }
       }
-      else
+      if(!processed)
       {
         const ShaderVariable *reg = GetDebugVariable(r);
 

@@ -699,7 +699,9 @@ class Debugger : public Processor, public ShaderDebugger
 public:
   Debugger();
   ~Debugger();
-  virtual void Parse(const rdcarray<uint32_t> &spirvWords);
+
+  using Processor::Parse;
+
   ShaderDebugTrace *BeginDebug(DebugAPIWrapper *apiWrapper, const ShaderStage stage,
                                const rdcstr &entryPoint, const rdcarray<SpecConstant> &specInfo,
                                const std::map<size_t, uint32_t> &instructionLines,
@@ -736,7 +738,7 @@ public:
   bool ArePointersAndEqual(const ShaderVariable &a, const ShaderVariable &b) const;
   DeviceOpResult WriteThroughPointer(ShaderVariable &ptr, const ShaderVariable &val) const;
   ShaderVariable MakeCompositePointer(const ShaderVariable &base, Id id,
-                                      rdcarray<uint32_t> &indices) const;
+                                      const rdcarray<uint32_t> &indices) const;
 
   DebugAPIWrapper *GetAPIWrapper() const;
   uint32_t GetNumInstructions() const { return (uint32_t)instructionOffsets.size(); }
@@ -809,6 +811,7 @@ private:
     rdcstr name;
   };
 
+  std::set<rdcstr> usedNames;
   DenseIdMap<rdcstr> strings;
   rdcarray<MemberName> memberNames;
   std::map<ShaderEntryPoint, Id> entryLookup;
@@ -838,10 +841,6 @@ private:
   Function *curFunction = NULL;
 
   rdcarray<size_t> instructionOffsets;
-
-  mutable std::set<rdcstr> usedNames;
-  mutable Threading::RWLock dynamicNamesLock;
-  mutable std::map<Id, rdcstr> dynamicNames;
 
   struct
   {
