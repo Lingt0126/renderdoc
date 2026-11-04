@@ -141,6 +141,12 @@ struct CaptureSettings
 :type: str
 )");
   rdcstr commandLine;
+  DOCUMENT(R"(Launch compatibility profile: auto, standard, mihoyo-d3d11 or returnal-d3d12.
+Only local Windows launches apply profiles; environment contains manual settings only.
+
+:type: str
+)");
+  rdcstr compatibilityProfile = "auto";
   DOCUMENT(R"(The environment changes to apply.
 
 :type: List[renderdoc.EnvironmentModification]

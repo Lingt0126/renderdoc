@@ -172,6 +172,7 @@ SOURCES += Code/qrenderdoc.cpp \
     Code/CaptureContext.cpp \
     Code/ScintillaSyntax.cpp \
     Code/QRDUtils.cpp \
+    Code/LaunchCompatibility.cpp \
     Code/MiniQtHelper.cpp \
     Code/BufferFormatter.cpp \
     Code/Resources.cpp \

@@ -592,6 +592,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="Code\QRDUtils.cpp" />
+    <ClCompile Include="Code\LaunchCompatibility.cpp" />
     <ClCompile Include="Code\MiniQtHelper.cpp" />
     <ClCompile Include="Code\Resources.cpp" />
     <ClCompile Include="Code\RGPInterop.cpp" />

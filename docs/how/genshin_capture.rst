@@ -14,25 +14,26 @@
     msbuild renderdoc.sln /t:Build /p:Configuration=Development /p:Platform=x64 /m
 
 2026-10-31 的原神捕获验证使用 ``x64/Development/qrenderdoc.exe``。
-2026-11-04 已重新构建提交 ``7a61648`` 并更新 ``C:\RenderDocCustom`` 的 x64/x86 运行时；
-部署副本通过 D3D11、DXGI 和公开回放初始化自测，本次未重复原神游戏内截帧。
-可用 ``C:\RenderDocCustom\renderdoccmd.exe version`` 核对提交号，避免误开其他安装版本。
+2026-11-04 普通 GUI 兼容版已更新到 ``C:\RenderDocCustom`` 的 x64/x86 运行时；
+当前使用流程及三个米哈游游戏的自动识别规则见 :doc:`gui_launch_compatibility`。
+请同时核对 ``CUSTOM_RUNTIME.md`` 中的构建/部署哈希，避免误开其他安装版本。
 保留构建输出的 ``renderdoc.dll`` 和同字节的 ``rdoc.dll``；标准 Launch 会按本项目
 现有规则选择目标运行时。不需要向游戏目录复制 DLL，也不需要启用 Global Hook。
 
 启动和截帧
 ----------
 
-1. 双击仓库根目录的 ``launch_genshin_capture.cmd``。它打开本仓库的 Development GUI，
-   并载入 ``Genshin.cap``，不会自动启动游戏。
-   也可以自行打开该 GUI，在 Launch Application 中点击 **Load Settings** 选择此配置。
-2. 检查 **Executable Path** 和 **Working Directory**。
+1. 直接打开 ``C:\RenderDocCustom\qrenderdoc.exe``，进入 **Launch Application**。
+2. 选择 **Executable Path**，保持 **Compatibility Mode** 为 **Automatic detection**。
    示例默认路径为 ``E:\Program Files\miHoYo Launcher\games\Genshin Impact Game\YuanShen.exe``；
-   如安装目录不同，改为实际 EXE 及其所在目录，并用 **Save Settings** 保存副本。
-3. 确认 Environment Variables 中有以下两项 Set 设置，关闭其他原神实例，再点击 **Launch**。
+   如安装目录不同，选择实际 EXE。工作目录可留空。
+3. 摘要应识别原神并显示下述两项自动设置。Environment Variables 可以保持为空；
+   关闭其他原神实例，再点击 **Launch**。
 4. 正常进入游戏后按 **F12**，或者使用捕获会话的 **Capture Frame(s) Immediately**。
 5. 截帧出现在 RenderDoc 捕获列表后，双击打开回放，并用 **Save** 保存到固定位置。
    不要仅凭生成文件就认定成功：还应检查事件列表、纹理和最终输出画面。
+
+原有 ``launch_genshin_capture.cmd`` 和 ``Genshin.cap`` 保留兼容用途；普通 GUI 不依赖它们。
 
 请从 Launch 创建新进程。本配置没有验证“先启动游戏，再 Inject”的工作流；
 DXGI 入口策略在 DLL 注册挂钩时确定，之后修改环境变量不能追溯改变已安装的挂钩。

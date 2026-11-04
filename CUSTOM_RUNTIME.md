@@ -1,5 +1,46 @@
 # 本机 RenderDoc 修复与验证（2026-09-23）
 
+## 2026-11-04 普通 GUI 兼容启动
+
+本轮已部署自动兼容策略。直接打开 `C:\RenderDocCustom\qrenderdoc.exe`，在 Launch Application
+选择游戏 EXE，保持 **Compatibility Mode = Automatic detection**，阅读摘要后点击 Launch。
+不需要 CMD、预先载入 `.cap` 或设置系统环境变量。
+[完整使用说明](docs/how/gui_launch_compatibility.rst)包含三个米哈游游戏和 Returnal 的选取规则、
+手动覆盖、旧配置兼容及 Python 入口。旧 CMD 和 `.cap` 保留兼容用途。
+
+实际 GUI 启动已逐一确认：原神、星穹铁道、绝区零连接成功并显示 **D3D11 (Active)**；
+Returnal 选择根目录 `Returnal.exe`，其余字段留空，自动解析 Shipping EXE 并连接 **D3D12 (Active)**。
+三个米哈游游戏本轮的登录后场景截帧和独立回放仍待用户完成协议／登录后分别验收，
+不能用旧原神证据或一个游戏的结果代替。Returnal 本轮已通过场景、人物和 HUD 的
+独立进程回放；完整回放仍以关闭 DLSS 为条件，自动策略不修改游戏配置或存档。
+
+Returnal 验收从 GUI 选择根目录 EXE，并用 Queue Capture 在第 5000 帧捕获。
+为保留用户原配置，测试手动传入已有隔离配置目录的 `-UserDir=... -windowed` 参数，
+该配置关闭 DLSS；自动策略补齐 `Returnal` 前缀。原始手动环境变量列表为空。
+RDC 保存于 `E:\RenderDocProject\captures\Returnal_GUI_auto_native_HUD_frame5000.rdc`，
+SHA256 为 `D45257B5A2C7F3CBA7A12DF66F6FA6BEC3CF1F7574F31521EAC96155F04317F0`。
+游戏退出后由独立 qrenderdoc 进程加载，D3D12 回放包含 2497 个动作、1850 次绘制／派发、
+779 个纹理和 533 个缓冲区，资源清单导出无错误。最终 Present（EID 15644）导出的
+`work/gui-launch-20261104/returnal-gui-independent-HUD.png` 已人工检查场景、人物、
+生命值、任务提示及小地图；此结果仅覆盖该关闭 DLSS 的场景。
+
+x64/x86 Development 构建通过；71 项策略／配置断言、Python 绑定一致性和字段读写检查通过；
+48 项 D3D11、6 项 DXGI、启动结果、EOS 解析器、公开回放初始化合约通过。
+本轮只改 GUI 启动设置的解析，不改变核心驱动默认策略、公共 C API 或 RDC 格式。
+
+构建和部署的十个关键文件 SHA256 已逐一核对，完整本机清单位于
+`E:\RenderDocProject\work\gui-launch-20261104\deployment-manifest.json`。
+此构建的版本字符串仍显示基础提交 `cbfc374`，须结合哈希识别：
+
+| 文件 | SHA256 |
+| --- | --- |
+| x64 qrenderdoc.exe | `B29D3F4F0CB8C1B16CA28BC95652DCE6938ABDE8BC66D116BD4E47CB3237628B` |
+| x64 renderdoc.dll / rdoc.dll | `08C519DC068720EC92098ADA3356F9F8367C19C7927F50D20EF5B199833BD3B6` |
+| x86 qrenderdoc.exe | `7C0FB5A216864DB91BA9291EB88431CA51CB0A936DE9D0A9B72B372971965E49` |
+| x86 renderdoc.dll / rdoc.dll | `9FF0142F6D7D4FB9CF8F7FD480424C36257E060770A72C43D84A08CA544EAFE6` |
+
+以下为较早的部署和验证记录，哈希不代表当前运行副本。
+
 2026-11-04 Returnal 更新：已部署 EOS 叠加层解析器递归修复及启动错误报告修复。
 当前 x64 DLL SHA256 为 `CE4B4053450308B5B7BC06EED86E1E734E4ECE85DFE0C02E7790CE1CE8A5410D`，
 x86 为 `F2B5959E4616E62A015AAEE6780474B8221E742EB8717806F13945CA7351FAFE`。
@@ -18,7 +59,7 @@ DLSS 开启时仍有场景回放缺失，截帧前需在游戏图像设置中关
 
 运行桌面的 **RenderDoc Custom**，或 `C:\RenderDocCustom\qrenderdoc.exe`。
 桌面快捷方式已设为以管理员身份启动；直接打开 EXE 时也建议以管理员身份运行。
-在 Launch Application 中载入游戏设置，确认可执行文件和工作目录后直接点击 **Launch**。
+在 Launch Application 中选择游戏 EXE，保持自动识别，确认兼容摘要后直接点击 **Launch**。
 这条路径使用标准 `ExecuteAndInject`，不要求先启用 Global Hook，也不需要手工写注册表、启动脚本或逐个修改 UE 工程。
 游戏进入可渲染画面后，可用 RenderDoc 的 **Capture Frame(s) Immediately** 或游戏内 F12 截帧。
 Global Hook 仍保留为显式的诊断/兼容入口，但不是标准 Launch 的前置条件。

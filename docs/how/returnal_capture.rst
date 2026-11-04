@@ -9,12 +9,17 @@ Returnal Windows D3D12 捕获
 
 重新构建 x64/x86 Development 后执行仓库的 ``deploy_custom_runtime.ps1``，
 更新 ``C:\RenderDocCustom``。关闭占用该目录的 RenderDoc 和捕获目标后才能部署。
-2026-11-04 的验证构建基于 ``7a61648`` 并包含本页修复，版本字符串仍是构建时的
-基础提交号；识别该验证二进制时应同时核对 ``CUSTOM_RUNTIME.md`` 中的 DLL SHA256。
+2026-11-04 普通 GUI 兼容版已部署。版本字符串仍是构建时的基础提交号；
+请同时核对 ``CUSTOM_RUNTIME.md`` 顶部的 GUI 和 DLL SHA256。
 
-运行仓库根目录的 ``launch_returnal_capture.cmd``，或用
-``C:\RenderDocCustom\qrenderdoc.exe`` 打开 ``Returnal.cap``，然后点击 Launch。
-配置选择真实游戏程序：
+直接打开 ``C:\RenderDocCustom\qrenderdoc.exe``，在 Launch Application 中选择安装根目录
+的 ``Returnal.exe``，保持 Compatibility Mode 为 Automatic detection，点击 Launch。
+不需要 CMD 或预先载入 ``Returnal.cap``。工作目录和参数可留空；摘要会显示真实游戏程序、
+默认安装根目录、补充的参数以及 DLSS 提醒。
+详见 :doc:`gui_launch_compatibility`。
+
+原有 ``launch_returnal_capture.cmd`` 和 ``Returnal.cap`` 保留兼容用途。
+其手动配置也可继续使用：
 
 * Executable: ``E:\SteamLibrary\steamapps\common\Returnal\Returnal\Binaries\Win64\Returnal-Win64-Shipping.exe``
 * Working directory: ``E:\SteamLibrary\steamapps\common\Returnal``

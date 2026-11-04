@@ -169,6 +169,23 @@
         </property>
        </widget>
       </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="compatibilityLabel">
+        <property name="text"><string>Compatibility Mode</string></property>
+       </widget>
+      </item>
+      <item row="4" column="2" colspan="2">
+       <widget class="QComboBox" name="compatibilityProfile"/>
+      </item>
+      <item row="5" column="0" colspan="4">
+       <widget class="QPlainTextEdit" name="compatibilitySummary">
+        <property name="minimumSize"><size><width>0</width><height>96</height></size></property>
+        <property name="maximumSize"><size><width>16777215</width><height>96</height></size></property>
+        <property name="readOnly"><bool>true</bool></property>
+        <property name="tabChangesFocus"><bool>true</bool></property>
+        <property name="plainText"><string>Standard launch: using manual settings only.</string></property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

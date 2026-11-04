@@ -123,6 +123,8 @@ private:
 
   rdcarray<EnvironmentModification> m_EnvModifications;
   bool m_Inject;
+  bool LocalWindowsLaunch() const;
+  void UpdateCompatibilityPreview();
   void fillProcessList();
   void initWarning(RDLabel *label);
 

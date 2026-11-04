@@ -29,6 +29,7 @@
 #include <QStandardItemModel>
 #include <QStandardPaths>
 #include "Code/QRDUtils.h"
+#include "Code/LaunchCompatibility.h"
 #include "Code/qprocessinfo.h"
 #include "Windows/Dialogs/EnvironmentEditor.h"
 #include "Windows/Dialogs/VirtualFileDialog.h"
@@ -216,6 +217,18 @@ CaptureDialog::CaptureDialog(ICaptureContext &ctx, OnCaptureMethod captureCallba
   m_CaptureCallback = captureCallback;
   m_InjectCallback = injectCallback;
 
+  ui->compatibilityProfile->addItem(tr("Automatic detection"), lit("auto"));
+  ui->compatibilityProfile->addItem(tr("Standard / manual settings only"), lit("standard"));
+  ui->compatibilityProfile->addItem(tr("MiHoYo D3D11"), lit("mihoyo-d3d11"));
+  ui->compatibilityProfile->addItem(tr("Returnal D3D12"), lit("returnal-d3d12"));
+  QObject::connect(ui->compatibilityProfile,
+                   static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                   [this](int) { UpdateCompatibilityPreview(); });
+  QObject::connect(ui->workDirPath, &QLineEdit::textChanged, this,
+                   [this]() { UpdateCompatibilityPreview(); });
+  QObject::connect(ui->cmdline, &QLineEdit::textChanged, this,
+                   [this]() { UpdateCompatibilityPreview(); });
+
   SetSettings(CaptureSettings());
 
   UpdateGlobalHook();
@@ -268,6 +281,7 @@ void CaptureDialog::SetInjectMode(bool inject)
     ui->launch->setText(lit("Launch"));
     this->setWindowTitle(lit("Launch Application"));
   }
+  UpdateCompatibilityPreview();
 }
 
 void CaptureDialog::on_CaptureCallstacks_toggled(bool checked)
@@ -331,6 +345,25 @@ void CaptureDialog::on_exePath_textChanged(const QString &text)
   }
 
   UpdateGlobalHook();
+  UpdateCompatibilityPreview();
+}
+
+bool CaptureDialog::LocalWindowsLaunch() const
+{
+#if defined(RENDERDOC_PLATFORM_WIN32)
+  return !m_Ctx.Replay().CurrentRemote().IsValid();
+#else
+  return false;
+#endif
+}
+
+void CaptureDialog::UpdateCompatibilityPreview()
+{
+  const LaunchCompatibilityResult resolved =
+      ResolveLaunchCompatibility(Settings(), LocalWindowsLaunch());
+  ui->compatibilitySummary->setPlainText(resolved.summary);
+  ui->compatibilityProfile->setEnabled(LocalWindowsLaunch() && !m_Inject &&
+                                       !ui->toggleGlobal->isChecked());
 }
 
 void CaptureDialog::vulkanLayerWarn_mouseClick()
@@ -758,9 +791,9 @@ void CaptureDialog::on_toggleGlobal_clicked()
 
   ui->toggleGlobal->setEnabled(false);
 
-  QList<QWidget *> enableDisableWidgets = {ui->exePath,       ui->exePathBrowse, ui->workDirPath,
-                                           ui->workDirBrowse, ui->cmdline,       ui->launch,
-                                           ui->saveSettings,  ui->loadSettings};
+  QList<QWidget *> enableDisableWidgets = {
+      ui->exePath, ui->exePathBrowse, ui->workDirPath,  ui->workDirBrowse,       ui->cmdline,
+      ui->launch,  ui->saveSettings,  ui->loadSettings, ui->compatibilityProfile};
 
   for(QWidget *o : ui->optionsGroup->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly))
     if(o)
@@ -911,12 +944,19 @@ void CaptureDialog::SetSettings(CaptureSettings settings)
 {
   SetInjectMode(settings.inject);
 
+  while(ui->compatibilityProfile->count() > 4)
+    ui->compatibilityProfile->removeItem(4);
+  QString profile = settings.compatibilityProfile;
+  int profileIndex = ui->compatibilityProfile->findData(profile);
+  if(profileIndex < 0)
+  {
+    ui->compatibilityProfile->addItem(tr("Unknown (%1) / manual settings only").arg(profile),
+                                      profile);
+    profileIndex = ui->compatibilityProfile->count() - 1;
+  }
+  ui->compatibilityProfile->setCurrentIndex(profileIndex);
   ui->exePath->setText(settings.executable);
-  QString workingDir = settings.workingDir;
-  if(workingDir.isEmpty() && !settings.executable.isEmpty() &&
-     !m_Ctx.Replay().CurrentRemote().IsValid())
-    workingDir = QFileInfo(settings.executable).absolutePath();
-  ui->workDirPath->setText(workingDir);
+  ui->workDirPath->setText(settings.workingDir);
   ui->cmdline->setText(settings.commandLine);
 
   SetEnvironmentModifications(settings.environment);
@@ -950,6 +990,7 @@ void CaptureDialog::SetSettings(CaptureSettings settings)
     ui->queueFrameCap->setChecked(false);
   }
 
+  UpdateCompatibilityPreview();
   if(settings.autoStart)
   {
     Launch();
@@ -967,6 +1008,7 @@ CaptureSettings CaptureDialog::Settings()
   ret.executable = ui->exePath->text();
   ret.workingDir = ui->workDirPath->text();
   ret.commandLine = GetCommandLine();
+  ret.compatibilityProfile = ui->compatibilityProfile->currentData().toString();
 
   ret.environment = m_EnvModifications;
 
@@ -1149,6 +1191,7 @@ void CaptureDialog::UpdateGlobalHook()
 
 void CaptureDialog::UpdateRemoteHost()
 {
+  UpdateCompatibilityPreview();
   if(m_Ctx.Replay().CurrentRemote().Protocol() &&
      m_Ctx.Replay().CurrentRemote().Protocol()->GetProtocolName() == "adb")
     ui->cmdLineLabel->setText(tr("Intent Arguments"));
@@ -1171,6 +1214,7 @@ void CaptureDialog::SetEnvironmentModifications(const rdcarray<EnvironmentModifi
   }
 
   ui->envVar->setText(envModText);
+  UpdateCompatibilityPreview();
 }
 
 ICaptureConnection *CaptureDialog::Launch()
@@ -1206,7 +1250,17 @@ ICaptureConnection *CaptureDialog::Launch()
   }
   else
   {
-    QString exe = ui->exePath->text().trimmed();
+    CaptureSettings raw = Settings();
+    raw.executable = ui->exePath->text().trimmed();
+    const LaunchCompatibilityResult resolved = ResolveLaunchCompatibility(raw, LocalWindowsLaunch());
+    ui->compatibilitySummary->setPlainText(resolved.summary);
+    if(!resolved.error.isEmpty())
+    {
+      RDDialog::critical(this, tr("Launch compatibility"), resolved.error);
+      return NULL;
+    }
+    const CaptureSettings &effective = resolved.settings;
+    QString exe = effective.executable;
 
     if(exe.isEmpty())
     {
@@ -1229,12 +1283,12 @@ ICaptureConnection *CaptureDialog::Launch()
       }
     }
 
-    QString workingDir = ui->workDirPath->text();
+    QString workingDir = effective.workingDir;
 
     // for non-remote captures, check the directory locally
     if(!m_Ctx.Replay().CurrentRemote().IsValid())
     {
-      if(!QDir(ui->workDirPath->text()).exists())
+      if(!QDir(workingDir).exists())
       {
         RDDialog::critical(
             this, tr("Invalid working directory"),
@@ -1243,7 +1297,7 @@ ICaptureConnection *CaptureDialog::Launch()
       }
     }
 
-    QString cmdLine = GetCommandLine();
+    QString cmdLine = effective.commandLine;
 
     SaveSettings(mostRecentFilename());
 
@@ -1265,7 +1319,8 @@ ICaptureConnection *CaptureDialog::Launch()
       }
     }
 
-    m_CaptureCallback(exe, workingDir, cmdLine, Settings().environment, Settings().options,
+    qInfo() << "Launch compatibility:" << resolved.profile << "target:" << exe;
+    m_CaptureCallback(exe, workingDir, cmdLine, effective.environment, effective.options,
                       [this, &ret](ICaptureConnection *live) {
                         if(ui->queueFrameCap->isChecked())
                           live->QueueCapture((int)ui->queuedFrame->value(),

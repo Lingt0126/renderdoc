@@ -4,6 +4,7 @@ How do I ...?
 .. toctree::
 
 	how_capture_frame
+	gui_launch_compatibility
 	genshin_capture
 	returnal_capture
 	wuthering_capture

@@ -87,6 +87,7 @@ CaptureSettings::operator QVariant() const
   ret[lit("executable")] = executable;
   ret[lit("workingDir")] = workingDir;
   ret[lit("commandLine")] = commandLine;
+  ret[lit("compatibilityProfile")] = compatibilityProfile;
 
   QVariantList env;
   for(int i = 0; i < environment.count(); i++)
@@ -124,6 +125,9 @@ CaptureSettings::CaptureSettings(const QVariant &v)
   executable = data[lit("executable")].toString();
   workingDir = data[lit("workingDir")].toString();
   commandLine = data[lit("commandLine")].toString();
+  compatibilityProfile = data.contains(lit("compatibilityProfile"))
+                             ? data[lit("compatibilityProfile")].toString()
+                             : lit("auto");
 
   QVariantList env = data[lit("environment")].toList();
   for(int i = 0; i < env.size(); i++)
