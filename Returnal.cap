@@ -1,0 +1,27 @@
+{
+  "rdocCaptureSettings": 1,
+  "settings": {
+    "autoStart": false,
+    "commandLine": "Returnal",
+    "environment": [],
+    "executable": "E:\\SteamLibrary\\steamapps\\common\\Returnal\\Returnal\\Binaries\\Win64\\Returnal-Win64-Shipping.exe",
+    "workingDir": "E:\\SteamLibrary\\steamapps\\common\\Returnal",
+    "inject": false,
+    "numQueuedFrames": 0,
+    "queuedFrameCap": 0,
+    "options": {
+      "allowFullscreen": true,
+      "allowVSync": true,
+      "apiValidation": false,
+      "captureAllCmdLists": false,
+      "captureCallstacks": false,
+      "captureCallstacksOnlyDraws": false,
+      "debugOutputMute": true,
+      "delayForDebugger": 0,
+      "hookIntoChildren": true,
+      "refAllResources": false,
+      "softMemoryLimit": 0,
+      "verifyBufferAccess": false
+    }
+  }
+}

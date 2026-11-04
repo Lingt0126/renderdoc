@@ -183,11 +183,14 @@ struct CachedHookData
     // we modify its import descriptors it leads to a crash as it hooks OUR functions.
     // instead, skip modifying the import descriptors, it will hook the 'real' d3d functions
     // and we can call them and have fraps + renderdoc playing nicely together.
-    // we also exclude some other overlay renderers here, such as steam's
+    // we also exclude other overlay renderers here. EOS hooks GetProcAddress and
+    // calls its saved resolver from the hook. Patching the overlay's imports can
+    // make that resolver our hook, creating an EOS -> RenderDoc -> EOS cycle.
     //
     // Also we exclude ourselves here - just in case the application has already loaded
     // renderdoc.dll, or tries to load it.
     if(strstr(lowername, "fraps") || strstr(lowername, "gameoverlayrenderer") ||
+       strstr(lowername, "eosovh-") == lowername ||
        strstr(lowername, STRINGIZE(RDOC_BASE_NAME) ".dll") == lowername ||
        strstr(lowername, "rdoc.dll") == lowername)
       return;

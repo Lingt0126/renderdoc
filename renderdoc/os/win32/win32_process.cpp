@@ -292,6 +292,8 @@ extern "C" __declspec(dllexport) void __cdecl INTERNAL_ApplyEnvMods(void *ignore
 
 void InjectDLL(HANDLE hProcess, rdcwstr libName)
 {
+  const DWORD pid = GetProcessId(hProcess);
+  RDCLOG("DLL load attempt: PID %u, path '%ls'", pid, libName.c_str());
   wchar_t dllPath[MAX_PATH + 1] = {0};
   wcscpy_s(dllPath, libName.c_str());
 
@@ -315,7 +317,22 @@ void InjectDLL(HANDLE hProcess, rdcwstr libName)
           (LPTHREAD_START_ROUTINE)GetProcAddress(kernel32, "LoadLibraryW"), remoteMem, 0, NULL);
       if(hThread)
       {
-        WaitForSingleObject(hThread, INFINITE);
+        const ULONGLONG start = GetTickCount64();
+        const DWORD waitResult = WaitForSingleObject(hThread, INFINITE);
+        const DWORD waitError = waitResult == WAIT_FAILED ? GetLastError() : ERROR_SUCCESS;
+        DWORD threadExit = 0;
+        const BOOL haveThreadExit = GetExitCodeThread(hThread, &threadExit);
+        const DWORD threadError = haveThreadExit ? ERROR_SUCCESS : GetLastError();
+        DWORD processExit = 0;
+        const BOOL haveProcessExit = GetExitCodeProcess(hProcess, &processExit);
+        const DWORD processError = haveProcessExit ? ERROR_SUCCESS : GetLastError();
+        // A thread exit code is only a DWORD, not a full-width HMODULE on x64, nor
+        // the target thread's GetLastError(). Module enumeration remains authoritative.
+        RDCLOG("DLL load thread: PID %u, wait=0x%08x error=%u elapsed=%llu ms; "
+               "threadStatusValid=%u exitDWORD=0x%08x queryError=%u; "
+               "processStatusValid=%u exit=0x%08x queryError=%u",
+               pid, waitResult, waitError, GetTickCount64() - start, haveThreadExit, threadExit,
+               threadError, haveProcessExit, processExit, processError);
         CloseHandle(hThread);
       }
       else
@@ -625,6 +642,15 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
                       PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE,
                   FALSE, pid);
 
+  if(hProcess == NULL)
+  {
+    const DWORD err = GetLastError();
+    RDResult result;
+    SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                     "Couldn't open target process %u for capture (Win32 error %u).", pid, err);
+    return {result, 0};
+  }
+
   if(opts.delayForDebugger > 0)
   {
     RDCDEBUG("Waiting for debugger attach to %lu", pid);
@@ -682,6 +708,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
   }
 
   bool capalt = false;
+
+  RDCLOG("Capture target: PID %u, WOW64=%u, DLL '%ls'", pid, isWow64, renderdocPath);
 
 #if DISABLED(RDOC_X64)
   BOOL selfWow64 = FALSE;
@@ -1017,6 +1045,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
   const char *rdoc_dll = STRINGIZE(RDOC_BASE_NAME);
 
   uintptr_t loc = FindRemoteRenderDocDLL(pid);
+
+  RDCLOG("DLL module lookup: PID %u, found=%u", pid, loc != 0);
 
   rdcpair<RDResult, uint32_t> result = {ResultCode::Succeeded, 0};
 
@@ -1637,8 +1667,13 @@ rdcpair<RDResult, uint32_t> Process::LaunchAndInjectIntoProcess(
                  pi.dwProcessId);
           rdcpair<RDResult, uint32_t> replacementRet =
               InjectIntoProcess(replacementPid, launchEnv, capturefile, opts, false);
-          if(replacementRet.first == ResultCode::Succeeded)
-            ret = replacementRet;
+          // The replacement is the selected capture target. In particular, do not
+          // return the bootstrap's successful but stale control port if loading the
+          // replacement failed: that turns a useful injection error into connection refused.
+          ret = replacementRet;
+          RDCLOG("Replacement capture result: bootstrap PID %u, target PID %u, success=%u, "
+                 "controlIdent=%u",
+                 pi.dwProcessId, replacementPid, ret.first == ResultCode::Succeeded, ret.second);
         }
         break;
       }

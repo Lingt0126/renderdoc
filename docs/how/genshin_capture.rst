@@ -13,8 +13,10 @@
 
     msbuild renderdoc.sln /t:Build /p:Configuration=Development /p:Platform=x64 /m
 
-本次验证使用 ``x64/Development/qrenderdoc.exe``，未更新此前的
-``C:\RenderDocCustom`` 部署。不要通过旧快捷方式或系统文件关联误开其他安装版本。
+2026-10-31 的原神捕获验证使用 ``x64/Development/qrenderdoc.exe``。
+2026-11-04 已重新构建提交 ``7a61648`` 并更新 ``C:\RenderDocCustom`` 的 x64/x86 运行时；
+部署副本通过 D3D11、DXGI 和公开回放初始化自测，本次未重复原神游戏内截帧。
+可用 ``C:\RenderDocCustom\renderdoccmd.exe version`` 核对提交号，避免误开其他安装版本。
 保留构建输出的 ``renderdoc.dll`` 和同字节的 ``rdoc.dll``；标准 Launch 会按本项目
 现有规则选择目标运行时。不需要向游戏目录复制 DLL，也不需要启用 Global Hook。
 

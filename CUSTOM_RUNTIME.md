@@ -1,6 +1,18 @@
 # 本机 RenderDoc 修复与验证（2026-09-23）
 
-原神的最新使用方法见 [Windows D3D11 捕获说明](docs/how/genshin_capture.rst)。该流程使用本仓库的 `x64/Development` 构建及 `Genshin.cap`，与下文历史部署路径分开验证。
+2026-11-04 Returnal 更新：已部署 EOS 叠加层解析器递归修复及启动错误报告修复。
+当前 x64 DLL SHA256 为 `CE4B4053450308B5B7BC06EED86E1E734E4ECE85DFE0C02E7790CE1CE8A5410D`，
+x86 为 `F2B5959E4616E62A015AAEE6780474B8221E742EB8717806F13945CA7351FAFE`。
+下面的 `F5D798...` 是本日更早的部署记录。Returnal 启动配置、测试范围与回放限制见
+[Returnal 捕获说明](docs/how/returnal_capture.rst)；运行 `launch_returnal_capture.cmd` 可载入配置。
+Returnal 已验证在关闭 DLSS、保留 1440p 和光追时完成 D3D12 截帧及完整场景独立回放；
+DLSS 开启时仍有场景回放缺失，截帧前需在游戏图像设置中关闭。
+
+原神的最新使用方法见 [Windows D3D11 捕获说明](docs/how/genshin_capture.rst)。2026-11-04 已重新构建提交 `7a61648` 的 x64/x86 Development，并通过 `deploy_custom_runtime.ps1` 更新 `C:\RenderDocCustom` 及其 `x86` 子目录。下文各游戏的旧验证记录保留其原始适用范围。
+
+本次部署的关键运行文件已逐个核对构建/部署 SHA256；x64 `renderdoc.dll` 为 `F5D7988D40A2FA8E297DC79D3886863F43C8618E859E0A60A33C42B7436DFA33`。部署副本通过 48 项 D3D11、6 项 DXGI 和公开回放初始化检查。这些自测不代表鸣潮已支持截帧。可运行 `C:\RenderDocCustom\renderdoccmd.exe version` 核对提交号，不能仅凭 `1.47` 判断新旧。
+
+鸣潮已在该新版下重新测试，仍出现明确点名 RenderDoc 的不兼容警告，尚未实现游戏内截帧；具体流程和结果见 [鸣潮启动兼容性核查](docs/how/wuthering_capture.rst)。
 
 ## 日常使用
 
